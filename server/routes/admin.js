@@ -91,6 +91,82 @@ router.get('/users', async (req, res) => {
 });
 
 /* ══════════════════════════════════════════════════════════════
+   POST /api/admin/users
+   Creates a new user directly (by Super Admin).
+══════════════════════════════════════════════════════════════ */
+router.post('/users', async (req, res) => {
+  try {
+    const { name, employeeId, email, phone, role, plant, department, password } = req.body;
+    if (!name || !employeeId || !email || !password || !role) {
+      return res.status(400).json({ error: 'Missing required fields: Name, Employee ID, Email, Password, Role.' });
+    }
+
+    const existing = await User.findOne({
+      $or: [{ email: email.toLowerCase() }, { employeeId }],
+    });
+    if (existing) {
+      return res.status(409).json({ error: 'User with this Email or Employee ID already exists.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = await User.create({
+      name,
+      employeeId,
+      email: email.toLowerCase(),
+      phone: phone || null,
+      role,
+      plant: plant || null,
+      department: department || null,
+      password: hashedPassword,
+      status: 'approved',
+      isApproved: true,
+      isBlocked: false,
+    });
+
+    const userObj = user.toObject();
+    delete userObj.password;
+    res.status(201).json({ message: 'User created successfully.', user: userObj });
+  } catch (err) {
+    console.error('[create-user]', err);
+    res.status(500).json({ error: 'Server error creating user.' });
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════
+   PUT /api/admin/users/:id
+   Updates an existing user (Name, Phone, Role, Plant, Dept, Status).
+══════════════════════════════════════════════════════════════ */
+router.put('/users/:id', async (req, res) => {
+  try {
+    const { name, phone, role, plant, department, status } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    if (name) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (role) user.role = role;
+    if (plant !== undefined) user.plant = plant;
+    if (department !== undefined) user.department = department;
+    if (status) {
+      user.status = status;
+      if (status === 'blocked') user.isBlocked = true;
+      else if (status === 'approved') {
+        user.isBlocked = false;
+        user.isApproved = true;
+      }
+    }
+
+    await user.save();
+    const userObj = user.toObject();
+    delete userObj.password;
+    res.json({ message: 'User updated successfully.', user: userObj });
+  } catch (err) {
+    console.error('[update-user]', err);
+    res.status(500).json({ error: 'Server error updating user.' });
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════
    PUT /api/admin/approve/:id
    Approves a pending user and assigns a role.
 ══════════════════════════════════════════════════════════════ */

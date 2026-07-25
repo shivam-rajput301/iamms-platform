@@ -222,6 +222,18 @@ export const adminApi = {
       `/api/admin/reset-password/${id}`, { method: 'PUT' }
     ),
 
+  createUser: (userData: Partial<AdminUser> & { password?: string }) =>
+    apiFetch<{ message: string; user: AdminUser }>('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    }),
+
+  updateUser: (id: string, userData: Partial<AdminUser>) =>
+    apiFetch<{ message: string; user: AdminUser }>(`/api/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    }),
+
   deleteUser: (id: string) =>
     apiFetch<{ message: string }>(
       `/api/admin/user/${id}`, { method: 'DELETE' }
