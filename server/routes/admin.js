@@ -25,9 +25,33 @@ router.get('/pending-count', async (req, res) => {
 });
 
 /* ══════════════════════════════════════════════════════════════
-   GET /api/admin/pending-registrations
-   Alias for pending users list, newest first.
+   GET /api/admin/pending-stats
+   Returns KPI stats for the Pending Registrations dashboard.
+   - pending:       total users with status=pending
+   - approvedToday: users approved (status=approved) today UTC
+   - rejectedToday: users rejected (status=rejected) today UTC
+   - totalWaiting:  alias for pending (for explicit card label)
 ══════════════════════════════════════════════════════════════ */
+router.get('/pending-stats', async (req, res) => {
+  try {
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+
+    const [pending, approvedToday, rejectedToday] = await Promise.all([
+      User.countDocuments({ status: 'pending' }),
+      User.countDocuments({ status: 'approved', updatedAt: { $gte: todayStart, $lte: todayEnd } }),
+      User.countDocuments({ status: 'rejected', updatedAt: { $gte: todayStart, $lte: todayEnd } }),
+    ]);
+
+    res.json({ pending, approvedToday, rejectedToday, totalWaiting: pending });
+  } catch (err) {
+    console.error('[pending-stats]', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
 router.get('/pending-registrations', async (req, res) => {
   try {
     const users = await User.find({ status: 'pending' })

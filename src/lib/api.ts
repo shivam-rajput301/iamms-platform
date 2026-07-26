@@ -178,9 +178,19 @@ export interface UserFilters {
   limit?: number;
 }
 
+export interface PendingStats {
+  pending: number;
+  approvedToday: number;
+  rejectedToday: number;
+  totalWaiting: number;
+}
+
 export const adminApi = {
   getPendingCount: () =>
     apiFetch<{ count: number }>('/api/admin/pending-count'),
+
+  getPendingStats: () =>
+    apiFetch<PendingStats>('/api/admin/pending-stats'),
 
   getPendingUsers: () =>
     apiFetch<{ users: AdminUser[]; total: number }>('/api/admin/pending-registrations'),
