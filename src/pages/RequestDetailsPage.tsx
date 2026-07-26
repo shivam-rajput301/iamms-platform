@@ -1,25 +1,18 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   UserCheck,
   Play,
   CheckCircle2,
   Send,
-  Clock,
   Wrench,
-  IndianRupee,
-  AlertCircle,
   ShieldAlert,
   Star,
   History,
   MessageSquare,
   Paperclip,
   Building2,
-  Calendar,
-  User,
-  Activity,
-  Layers,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -40,9 +33,9 @@ import {
   useSubmitRating,
 } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth';
-import { PRIORITIES, REQUEST_STATUS_META } from '@/lib/constants';
-import { formatCurrency, formatDateTime, formatDate, timeAgo, cn } from '@/lib/utils';
-import type { Priority, RequestStatus } from '@/lib/types';
+
+import { formatCurrency, formatDate, timeAgo, cn } from '@/lib/utils';
+import type { RequestStatus } from '@/lib/types';
 
 export function RequestDetailsPage() {
   const { id } = useParams();
@@ -233,11 +226,6 @@ export function RequestDetailsPage() {
     }
   }
 
-  async function changePriority(p: Priority) {
-    if (!id) return;
-    await updateRequest.mutateAsync({ id, priority: p });
-  }
-
   /* 6-Stage Timeline Bar */
   const isAssigned = !!request.assigned_engineer || request.status === 'assigned' || request.status === 'in_progress' || isCompleted;
   const isStarted = request.status === 'in_progress' || isCompleted;
@@ -256,7 +244,7 @@ export function RequestDetailsPage() {
 
   /* Filter Complaint History & Engineer Comment Logs */
   const historyLogs = logs.filter((l) => l.note?.toLowerCase().includes('complaint') || l.note?.toLowerCase().includes('vibration') || l.note?.toLowerCase().includes('leakage') || l.note?.toLowerCase().includes('overheating'));
-  const engineerComments = logs.filter((l) => l.note?.toLowerCase().includes('engineer') || l.note?.toLowerCase().includes('replacement') || l.log_type === 'update');
+
 
   return (
     <div className="animate-fade-in space-y-6">

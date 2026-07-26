@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Factory,
   Wrench,
-  AlertTriangle,
   Users,
   ClipboardCheck,
   Package,
@@ -17,7 +16,6 @@ import {
   AlertCircle,
   Star,
   Bell,
-  Hourglass,
   History,
   MessageSquare,
 } from 'lucide-react';
@@ -80,7 +78,7 @@ function EmployeeDashboard() {
   const [ratingModalRequest, setRatingModalRequest] = useState<MaintenanceRequest | null>(null);
   const [starRating, setStarRating] = useState<number>(5);
   const [feedbackComment, setFeedbackComment] = useState('');
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [selectedRequestId] = useState<string | null>(null);
 
   /* 1. Shared employee request dataset */
   const myRequests = useMemo(() => {
@@ -618,7 +616,7 @@ function DetailedRequestTimeline({ request }: { request: MaintenanceRequest }) {
 
   /* Filter logs for complaint history and engineer comments */
   const historyLogs = logs.filter((l) => l.note?.toLowerCase().includes('complaint') || l.note?.toLowerCase().includes('vibration') || l.note?.toLowerCase().includes('leakage') || l.note?.toLowerCase().includes('overheating'));
-  const engineerComments = logs.filter((l) => l.note?.toLowerCase().includes('engineer') || l.note?.toLowerCase().includes('replacement') || l.log_type === 'update');
+
 
   return (
     <div className="space-y-6">

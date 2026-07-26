@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Search, Filter, Eye, Pencil, Ban, Trash2, RefreshCw,
+  Search, Eye, Pencil, Ban, Trash2, RefreshCw,
   CheckCircle, XCircle, Key, Users, ChevronLeft, ChevronRight,
-  User as UserIcon, Mail, Phone, MapPin, Building2, Calendar, Plus,
+  User as UserIcon, Building2, Plus,
   MoreVertical, ShieldCheck, UserX, AlertCircle, X, UserCheck,
-  Briefcase, Layers, Activity, Check, Lock, Save,
+  Save,
 } from 'lucide-react';
 import { adminApi, getApiToken, type AdminUser } from '@/lib/api';
 import { DEPARTMENTS } from '@/lib/constants';
