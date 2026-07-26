@@ -74,7 +74,7 @@ export class ApiError extends Error {
    Auth endpoints (public)
 ══════════════════════════════════════════════════════════════ */
 export interface RequestAccessPayload {
-  name: string;
+  name?: string;       // optional — Super Admin fills in during approval
   employeeId: string;
   email: string;
   phone?: string;

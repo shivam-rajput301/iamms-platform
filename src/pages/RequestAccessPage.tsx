@@ -1,55 +1,62 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Building2, CheckCircle, User, Mail, Phone,
-  Lock, EyeOff, Eye, AlertCircle, MapPin, Layers, Briefcase, CreditCard,
+  ArrowLeft, CheckCircle, Mail,
+  Lock, EyeOff, Eye, AlertCircle, CreditCard,
 } from 'lucide-react';
-import { COMPANY_NAME, COMPANY_SHORT, DEPARTMENTS } from '@/lib/constants';
+import { COMPANY_NAME } from '@/lib/constants';
 import { useAuth } from '@/lib/auth';
 
-/* ── Shared input style helpers ─────────────────────────────── */
+/* ── Colour tokens (matches the login page palette) ─────────── */
+const CYAN = '#17C7E8';
+const NAVY = '#09111F';
+
+/* ── Shared input style ───────────────────────────────────────── */
 const INPUT_BASE: React.CSSProperties = {
   width: '100%',
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.12)',
-  color: '#f1f5f9',
+  boxSizing: 'border-box',
+  background: 'rgba(8,15,30,0.7)',
+  border: '1px solid rgba(23,199,232,0.12)',
+  color: '#E2E8F0',
   borderRadius: 10,
-  padding: '10px 14px',
-  fontSize: 13,
+  padding: '11px 13px 11px 40px',
+  fontSize: 13.5,
   fontFamily: 'inherit',
   outline: 'none',
-  transition: 'border-color .15s, box-shadow .15s',
+  transition: 'border-color 150ms, box-shadow 150ms',
 };
 
-const SELECT_BASE: React.CSSProperties = {
-  ...INPUT_BASE,
-  background: 'rgba(15,23,42,0.90)',
-};
-
-function onFocus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
-  e.currentTarget.style.borderColor = '#2563eb';
-  e.currentTarget.style.boxShadow   = '0 0 0 3px rgba(37,99,235,0.16)';
+function onFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = 'rgba(23,199,232,0.45)';
+  e.currentTarget.style.boxShadow   = '0 0 0 3px rgba(23,199,232,0.08)';
 }
-function onBlur(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
-  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+function onBlur(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = 'rgba(23,199,232,0.12)';
   e.currentTarget.style.boxShadow   = 'none';
 }
 
+/* ── Small label ─────────────────────────────────────────────── */
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.18em]"
-      style={{ color: '#475569' }}>
+    <label style={{
+      display: 'block',
+      marginBottom: 7,
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: '0.18em',
+      textTransform: 'uppercase',
+      color: 'rgba(255,255,255,0.45)',
+    }}>
       {children}
     </label>
   );
 }
 
-/* ── Plants list ─────────────────────────────────────────────── */
-const PLANTS = ['Head Office', 'Plant A', 'Plant B', 'Plant C', 'Smelter Complex', 'Rolling Unit'];
-const AREAS  = ['Administration', 'Production', 'Quality', 'Safety & EHS', 'Engineering', 'Maintenance', 'Logistics', 'IT & Systems'];
-
 /* ════════════════════════════════════════════════════════════════
-   REQUEST ACCESS PAGE
+   REQUEST SYSTEM ACCESS — minimal 4-field form
+   Fields collected: Employee ID · Email · Password · Confirm Password
+   All organizational data (Name, Plant, Dept, Role) is assigned
+   by the Super Admin during the approval workflow.
 ════════════════════════════════════════════════════════════════ */
 export function RequestAccessPage() {
   const navigate = useNavigate();
@@ -62,19 +69,13 @@ export function RequestAccessPage() {
   const [apiError,  setApiError]  = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    fullName:    '',
-    employeeId:  '',
-    email:       '',
-    phone:       '',
-    plant:       '',
-    area:        '',
-    department:  '',
-    designation: '',
-    password:    '',
+    employeeId:      '',
+    email:           '',
+    password:        '',
     confirmPassword: '',
   });
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setApiError(null);
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
@@ -94,15 +95,9 @@ export function RequestAccessPage() {
 
     setLoading(true);
     const { error } = await requestAccess({
-      name:        form.fullName,
-      employeeId:  form.employeeId,
-      email:       form.email,
-      phone:       form.phone || undefined,
-      plant:       form.plant || undefined,
-      area:        form.area  || undefined,
-      department:  form.department  || undefined,
-      designation: form.designation || undefined,
-      password:    form.password,
+      employeeId: form.employeeId.trim(),
+      email:      form.email.trim(),
+      password:   form.password,
     });
     setLoading(false);
 
@@ -113,339 +108,412 @@ export function RequestAccessPage() {
     }
   }
 
-  /* ── Shared input with icon ──────────────────────────────── */
-  function Field({
-    name, label, type = 'text', placeholder, required = true,
-    icon: Icon, autoComplete,
-  }: {
-    name: keyof typeof form;
-    label: string;
-    type?: string;
-    placeholder?: string;
-    required?: boolean;
-    icon: typeof User;
-    autoComplete?: string;
-  }) {
+  /* ── Success screen ──────────────────────────────────────────── */
+  if (submitted) {
     return (
-      <div>
-        <Label>{label}{required && <span style={{ color: '#ef4444' }}> *</span>}</Label>
-        <div className="relative">
-          <Icon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none" style={{ color: '#475569' }} />
-          <input
-            name={name}
-            type={type}
-            value={form[name]}
-            onChange={handleChange}
-            placeholder={placeholder}
-            required={required}
-            autoComplete={autoComplete}
-            style={{ ...INPUT_BASE, paddingLeft: 36 }}
-            onFocus={onFocus}
-            onBlur={onBlur}
-          />
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: `linear-gradient(145deg, ${NAVY} 0%, #060f22 60%, #020c1a 100%)`,
+        fontFamily: "'Inter', sans-serif",
+        padding: 24,
+      }}>
+        {/* Grid overlay */}
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none',
+          backgroundImage: `linear-gradient(rgba(23,199,232,0.025) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(23,199,232,0.025) 1px, transparent 1px)`,
+          backgroundSize: '48px 48px',
+        }}/>
+
+        <div style={{
+          position: 'relative', zIndex: 10,
+          background: '#0D1829',
+          border: '1px solid rgba(23,199,232,0.12)',
+          borderRadius: 16,
+          padding: '48px 40px',
+          maxWidth: 420,
+          width: '100%',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%',
+            background: 'rgba(16,185,129,0.10)',
+            border: '1px solid rgba(16,185,129,0.28)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px',
+          }}>
+            <CheckCircle style={{ width: 30, height: 30, color: '#34d399' }}/>
+          </div>
+          <h2 style={{ margin: '0 0 10px', fontSize: '1.35rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
+            Request Submitted
+          </h2>
+          <p style={{ margin: '0 0 8px', fontSize: 14, lineHeight: 1.7, color: 'rgba(255,255,255,0.5)' }}>
+            Your access request has been submitted successfully.
+          </p>
+          <p style={{ margin: '0 0 28px', fontSize: 13, color: 'rgba(255,255,255,0.32)' }}>
+            The system administrator will review your request and activate your account.
+            You will be notified once access is granted.
+          </p>
+          <button
+            onClick={() => navigate('/login')}
+            style={{
+              width: '100%', padding: '12px 20px',
+              fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
+              background: CYAN, color: '#080F1E',
+              border: 'none', borderRadius: 10,
+              cursor: 'pointer', letterSpacing: '0.02em',
+            }}
+          >
+            Back to Sign In
+          </button>
         </div>
       </div>
     );
   }
 
+  /* ── Form screen ─────────────────────────────────────────────── */
   return (
-    <div
-      className="min-h-screen flex items-start justify-center p-6 pt-10"
-      style={{
-        background: 'linear-gradient(145deg, #020817 0%, #060f22 50%, #020c1a 100%)',
-        fontFamily: "'Inter', sans-serif",
-      }}
-    >
-      {/* Blueprint grid */}
-      <div className="fixed inset-0 opacity-[0.04] pointer-events-none" style={{
-        backgroundImage: 'linear-gradient(#3b82f6 1px, transparent 1px), linear-gradient(90deg, #3b82f6 1px, transparent 1px)',
-        backgroundSize: '40px 40px',
-      }} />
-      {/* Glow */}
-      <div className="fixed right-0 top-0 h-[500px] w-[500px] rounded-full opacity-10 blur-[120px] pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #2563eb, transparent 70%)' }} />
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: `linear-gradient(145deg, ${NAVY} 0%, #060f22 60%, #020c1a 100%)`,
+      fontFamily: "'Inter', sans-serif",
+      padding: '32px 24px',
+    }}>
+      {/* Grid overlay */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none',
+        backgroundImage: `linear-gradient(rgba(23,199,232,0.025) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(23,199,232,0.025) 1px, transparent 1px)`,
+        backgroundSize: '48px 48px',
+      }}/>
 
-      <div className="relative z-10 w-full max-w-2xl pb-10">
-        {/* Back button */}
+      <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 460 }}>
+
+        {/* Back link */}
         <button
           onClick={() => navigate('/login')}
-          className="mb-6 flex items-center gap-2 text-sm transition-opacity hover:opacity-70"
-          style={{ color: '#64748b' }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            marginBottom: 24,
+            background: 'none', border: 'none', padding: 0,
+            cursor: 'pointer', color: 'rgba(255,255,255,0.35)',
+            fontSize: 13, fontFamily: 'inherit',
+            transition: 'color 150ms',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.65)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft style={{ width: 14, height: 14 }}/>
           Back to Sign In
         </button>
 
         {/* Card */}
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{
-            background: 'rgba(11,20,40,0.80)',
-            backdropFilter: 'blur(24px)',
-            border: '1px solid rgba(37,99,235,0.14)',
-            boxShadow: '0 28px 70px rgba(0,0,0,0.6)',
-          }}
-        >
-          {/* Header */}
-          <div className="px-8 py-5 flex items-center gap-3"
-            style={{ borderBottom: '1px solid rgba(37,99,235,0.10)', background: 'rgba(2,8,23,0.4)' }}>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg"
-              style={{ background: 'linear-gradient(135deg, #2563eb, #1e40af)' }}>
-              <Building2 className="h-5 w-5 text-white" />
+        <div style={{
+          background: '#0D1829',
+          border: '1px solid rgba(23,199,232,0.12)',
+          borderRadius: 14,
+          overflow: 'hidden',
+        }}>
+          {/* Card header */}
+          <div style={{
+            padding: '18px 32px',
+            borderBottom: '1px solid rgba(23,199,232,0.08)',
+            background: 'rgba(2,8,23,0.35)',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+              background: 'rgba(23,199,232,0.1)',
+              border: '1px solid rgba(23,199,232,0.22)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke={CYAN} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 19.48 18 20 18 20l2-2-1.484-1.75 1.098-2.652 2.386-.62V11l-2.378-.605z" stroke={CYAN} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             <div>
-              <p className="text-xs font-black tracking-widest text-white uppercase">{COMPANY_SHORT}</p>
-              <p className="text-[10px] tracking-wider" style={{ color: '#475569' }}>Employee Access Request Portal</p>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#fff' }}>
+                IAMMS
+              </p>
+              <p style={{ margin: 0, fontSize: 9.5, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                Employee Access Request Portal
+              </p>
             </div>
-            {/* Status chip */}
-            <div className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-1"
-              style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.18)' }}>
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
-              <span className="text-[9px] font-semibold tracking-widest uppercase" style={{ color: '#60a5fa' }}>
-                Registration Open
+            <div style={{
+              marginLeft: 'auto',
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '4px 10px', borderRadius: 99,
+              background: 'rgba(23,199,232,0.07)',
+              border: '1px solid rgba(23,199,232,0.18)',
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: CYAN,
+                boxShadow: `0 0 6px ${CYAN}`,
+                animation: 'pulse 2s infinite',
+              }}/>
+              <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: CYAN }}>
+                Open
               </span>
             </div>
           </div>
 
-          <div className="px-8 py-8">
-            {submitted ? (
-              /* ── Success state ── */
-              <div className="py-10 text-center">
-                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full"
-                  style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                  <CheckCircle className="h-8 w-8 text-emerald-400" />
+          {/* Card body */}
+          <div style={{ padding: '32px 32px 28px' }}>
+
+            {/* Heading */}
+            <h2 style={{
+              margin: '0 0 6px',
+              fontSize: '1.5rem',
+              fontWeight: 800,
+              color: '#ffffff',
+              letterSpacing: '-0.02em',
+            }}>
+              Request System Access
+            </h2>
+            <p style={{ margin: '0 0 28px', fontSize: 13.5, lineHeight: 1.65, color: 'rgba(255,255,255,0.4)' }}>
+              Enter your official Employee ID and registered company email.
+              Your request will be reviewed by the system administrator before access is granted.
+            </p>
+
+            <form onSubmit={handleSubmit}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                {/* Employee ID */}
+                <div>
+                  <Label>Employee ID <span style={{ color: '#ef4444' }}>*</span></Label>
+                  <div style={{ position: 'relative' }}>
+                    <CreditCard style={{
+                      position: 'absolute', left: 13, top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 15, height: 15,
+                      color: 'rgba(23,199,232,0.5)', pointerEvents: 'none',
+                    }}/>
+                    <input
+                      id="employeeId"
+                      name="employeeId"
+                      type="text"
+                      autoComplete="username"
+                      value={form.employeeId}
+                      onChange={handleChange}
+                      placeholder="e.g. IAMMS-EMP-001"
+                      required
+                      style={INPUT_BASE}
+                      onFocus={onFocus}
+                      onBlur={onBlur}
+                    />
+                  </div>
                 </div>
-                <h2 className="text-xl font-black text-white mb-2">Request Submitted</h2>
-                <p className="text-sm leading-relaxed mb-2" style={{ color: '#94a3b8', maxWidth: 400, margin: '0 auto 16px' }}>
-                  Your registration request has been submitted successfully.
-                  Please wait for administrator approval.
-                </p>
-                <p className="text-xs mb-8" style={{ color: '#475569' }}>
-                  You will be notified once your account is approved.
-                </p>
+
+                {/* Official Email */}
+                <div>
+                  <Label>Official Email Address <span style={{ color: '#ef4444' }}>*</span></Label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail style={{
+                      position: 'absolute', left: 13, top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 15, height: 15,
+                      color: 'rgba(23,199,232,0.5)', pointerEvents: 'none',
+                    }}/>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      placeholder="you@company.com"
+                      required
+                      style={INPUT_BASE}
+                      onFocus={onFocus}
+                      onBlur={onBlur}
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <Label>Password <span style={{ color: '#ef4444' }}>*</span></Label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock style={{
+                      position: 'absolute', left: 13, top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 15, height: 15,
+                      color: 'rgba(23,199,232,0.5)', pointerEvents: 'none',
+                    }}/>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPw ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      value={form.password}
+                      onChange={handleChange}
+                      placeholder="Min. 8 characters"
+                      required
+                      style={{ ...INPUT_BASE, paddingRight: 42 }}
+                      onFocus={onFocus}
+                      onBlur={onBlur}
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowPw((p) => !p)}
+                      aria-label={showPw ? 'Hide password' : 'Show password'}
+                      style={{
+                        position: 'absolute', right: 12, top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', padding: 0,
+                        cursor: 'pointer',
+                        color: 'rgba(255,255,255,0.32)',
+                        display: 'flex', alignItems: 'center',
+                        transition: 'color 150ms',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.32)')}
+                    >
+                      {showPw
+                        ? <EyeOff style={{ width: 15, height: 15 }}/>
+                        : <Eye    style={{ width: 15, height: 15 }}/>
+                      }
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <Label>Confirm Password <span style={{ color: '#ef4444' }}>*</span></Label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock style={{
+                      position: 'absolute', left: 13, top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 15, height: 15,
+                      color: 'rgba(23,199,232,0.5)', pointerEvents: 'none',
+                    }}/>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showCPw ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      value={form.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Re-enter your password"
+                      required
+                      style={{ ...INPUT_BASE, paddingRight: 42 }}
+                      onFocus={onFocus}
+                      onBlur={onBlur}
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowCPw((p) => !p)}
+                      aria-label={showCPw ? 'Hide password' : 'Show password'}
+                      style={{
+                        position: 'absolute', right: 12, top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', padding: 0,
+                        cursor: 'pointer',
+                        color: 'rgba(255,255,255,0.32)',
+                        display: 'flex', alignItems: 'center',
+                        transition: 'color 150ms',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.32)')}
+                    >
+                      {showCPw
+                        ? <EyeOff style={{ width: 15, height: 15 }}/>
+                        : <Eye    style={{ width: 15, height: 15 }}/>
+                      }
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error */}
+                {apiError && (
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 8,
+                    padding: '10px 13px', borderRadius: 10,
+                    background: 'rgba(127,29,29,0.20)',
+                    border: '1px solid rgba(185,28,28,0.30)',
+                  }}>
+                    <AlertCircle style={{ width: 14, height: 14, color: '#FCA5A5', flexShrink: 0, marginTop: 1 }}/>
+                    <span style={{ fontSize: 12.5, color: '#FCA5A5', lineHeight: 1.5 }}>{apiError}</span>
+                  </div>
+                )}
+
+                {/* Info notice */}
+                <div style={{
+                  padding: '10px 13px', borderRadius: 10, fontSize: 12.5, lineHeight: 1.6,
+                  background: 'rgba(23,199,232,0.05)',
+                  border: '1px solid rgba(23,199,232,0.14)',
+                  color: 'rgba(23,199,232,0.7)',
+                }}>
+                  After submission, the system administrator will verify your Employee ID, assign your name,
+                  department, plant, role and designation, then activate your account.
+                </div>
+
+                {/* Submit */}
                 <button
-                  onClick={() => navigate('/login')}
-                  className="px-8 py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-[0.98]"
-                  style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 20px rgba(37,99,235,0.4)' }}
+                  type="submit"
+                  id="submit-request-btn"
+                  disabled={loading}
+                  style={{
+                    width: '100%', padding: '13px 20px', marginTop: 4,
+                    fontSize: 15, fontWeight: 700,
+                    letterSpacing: '0.04em', fontFamily: 'inherit',
+                    background: loading ? 'rgba(23,199,232,0.4)' : CYAN,
+                    color: '#080F1E',
+                    border: 'none', borderRadius: 10,
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.75 : 1,
+                    transition: 'opacity 150ms, filter 150ms',
+                    boxShadow: '0 4px 20px rgba(23,199,232,0.22)',
+                  }}
+                  onMouseEnter={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1.08)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.filter = 'none'; }}
                 >
-                  Return to Sign In
+                  {loading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <svg style={{ width: 15, height: 15, animation: 'spin 0.9s linear infinite' }} viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5"
+                          strokeDasharray="60" strokeDashoffset="20" strokeLinecap="round"/>
+                      </svg>
+                      Submitting Request…
+                    </span>
+                  ) : 'Submit Request'}
                 </button>
+
               </div>
-            ) : (
-              <>
-                <div className="mb-7">
-                  <h2 className="text-2xl font-black text-white" style={{ letterSpacing: '-0.02em' }}>Request Access</h2>
-                  <p className="mt-1.5 text-sm" style={{ color: '#64748b' }}>
-                    Fill in your details below. An administrator will review and approve your request.
-                  </p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  {/* Section: Personal Information */}
-                  <div>
-                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: '#2563eb' }}>
-                      Personal Information
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Full Name */}
-                      <div className="col-span-2">
-                        <Field name="fullName" label="Full Name" placeholder="John Smith" icon={User} autoComplete="name" />
-                      </div>
-                      {/* Employee ID */}
-                      <div>
-                        <Label>Employee ID <span style={{ color: '#ef4444' }}>*</span></Label>
-                        <div className="relative">
-                          <CreditCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none" style={{ color: '#475569' }} />
-                          <input
-                            name="employeeId" type="text" value={form.employeeId}
-                            onChange={handleChange} placeholder="e.g. EMP-2026-001"
-                            required style={{ ...INPUT_BASE, paddingLeft: 36 }}
-                            onFocus={onFocus} onBlur={onBlur}
-                          />
-                        </div>
-                      </div>
-                      {/* Designation */}
-                      <div>
-                        <Label>Designation <span style={{ color: '#ef4444' }}>*</span></Label>
-                        <div className="relative">
-                          <Briefcase className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none" style={{ color: '#475569' }} />
-                          <input
-                            name="designation" type="text" value={form.designation}
-                            onChange={handleChange} placeholder="e.g. Maintenance Engineer"
-                            required style={{ ...INPUT_BASE, paddingLeft: 36 }}
-                            onFocus={onFocus} onBlur={onBlur}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section: Contact Details */}
-                  <div>
-                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: '#2563eb' }}>
-                      Contact Details
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
-                        <Field name="email" label="Official Email" type="email" placeholder="you@company.com" icon={Mail} autoComplete="email" />
-                      </div>
-                      <div className="col-span-2 sm:col-span-1">
-                        <Label>Mobile Number</Label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none" style={{ color: '#475569' }} />
-                          <input
-                            name="phone" type="tel" value={form.phone}
-                            onChange={handleChange} placeholder="+91 98765 43210"
-                            required={false} style={{ ...INPUT_BASE, paddingLeft: 36 }}
-                            onFocus={onFocus} onBlur={onBlur}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section: Plant & Department */}
-                  <div>
-                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: '#2563eb' }}>
-                      Plant & Department
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Plant */}
-                      <div>
-                        <Label>Plant <span style={{ color: '#ef4444' }}>*</span></Label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none z-10" style={{ color: '#475569' }} />
-                          <select name="plant" value={form.plant} onChange={handleChange} required
-                            style={{ ...SELECT_BASE, paddingLeft: 36, color: form.plant ? '#f1f5f9' : '#475569' }}
-                            onFocus={onFocus} onBlur={onBlur}>
-                            <option value="">Select plant</option>
-                            {PLANTS.map((p) => <option key={p}>{p}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      {/* Area */}
-                      <div>
-                        <Label>Area / Section <span style={{ color: '#ef4444' }}>*</span></Label>
-                        <div className="relative">
-                          <Layers className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none z-10" style={{ color: '#475569' }} />
-                          <select name="area" value={form.area} onChange={handleChange} required
-                            style={{ ...SELECT_BASE, paddingLeft: 36, color: form.area ? '#f1f5f9' : '#475569' }}
-                            onFocus={onFocus} onBlur={onBlur}>
-                            <option value="">Select area</option>
-                            {AREAS.map((a) => <option key={a}>{a}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      {/* Department */}
-                      <div className="col-span-2">
-                        <Label>Department <span style={{ color: '#ef4444' }}>*</span></Label>
-                        <select name="department" value={form.department} onChange={handleChange} required
-                          style={{ ...SELECT_BASE, color: form.department ? '#f1f5f9' : '#475569' }}
-                          onFocus={onFocus} onBlur={onBlur}>
-                          <option value="">Select department</option>
-                          {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section: Set Password */}
-                  <div>
-                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: '#2563eb' }}>
-                      Set Password
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Password */}
-                      <div>
-                        <Label>Password <span style={{ color: '#ef4444' }}>*</span></Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none" style={{ color: '#475569' }} />
-                          <input
-                            name="password" type={showPw ? 'text' : 'password'}
-                            value={form.password} onChange={handleChange}
-                            placeholder="Min. 8 characters" required autoComplete="new-password"
-                            style={{ ...INPUT_BASE, paddingLeft: 36, paddingRight: 40 }}
-                            onFocus={onFocus} onBlur={onBlur}
-                          />
-                          <button type="button" tabIndex={-1} onClick={() => setShowPw((p) => !p)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-70"
-                            style={{ color: '#475569' }}
-                            aria-label={showPw ? 'Hide password' : 'Show password'}>
-                            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
-                        </div>
-                      </div>
-                      {/* Confirm Password */}
-                      <div>
-                        <Label>Confirm Password <span style={{ color: '#ef4444' }}>*</span></Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none" style={{ color: '#475569' }} />
-                          <input
-                            name="confirmPassword" type={showCPw ? 'text' : 'password'}
-                            value={form.confirmPassword} onChange={handleChange}
-                            placeholder="Re-enter password" required autoComplete="new-password"
-                            style={{ ...INPUT_BASE, paddingLeft: 36, paddingRight: 40 }}
-                            onFocus={onFocus} onBlur={onBlur}
-                          />
-                          <button type="button" tabIndex={-1} onClick={() => setShowCPw((p) => !p)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-70"
-                            style={{ color: '#475569' }}
-                            aria-label={showCPw ? 'Hide password' : 'Show password'}>
-                            {showCPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Error Banner */}
-                  {apiError && (
-                    <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-xs"
-                      style={{ background: 'rgba(127,29,29,0.18)', border: '1px solid rgba(185,28,28,0.3)', color: '#fca5a5' }}>
-                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" />
-                      <span>{apiError}</span>
-                    </div>
-                  )}
-
-                  {/* Notice */}
-                  <div className="rounded-xl px-4 py-3 text-xs"
-                    style={{ background: 'rgba(37,99,235,0.07)', border: '1px solid rgba(37,99,235,0.18)', color: '#93c5fd' }}>
-                    Your request will be reviewed by the IT Administrator. New accounts require approval before system access is granted.
-                  </div>
-
-                  {/* Submit */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.98]"
-                    style={{
-                      background: loading ? 'rgba(37,99,235,0.45)' : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                      boxShadow: '0 4px 20px rgba(37,99,235,0.4)',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      opacity: loading ? 0.7 : 1,
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    {loading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"
-                            strokeDasharray="60" strokeDashoffset="20" strokeLinecap="round" />
-                        </svg>
-                        Submitting Request…
-                      </span>
-                    ) : 'Submit Request'}
-                  </button>
-                </form>
-              </>
-            )}
+            </form>
           </div>
         </div>
 
-        <p className="mt-6 text-center text-[11px]" style={{ color: '#1e293b' }}>
-          © 2026 {COMPANY_NAME} · For internal use only
+        {/* Footer */}
+        <p style={{ marginTop: 20, textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.15)' }}>
+          © {new Date().getFullYear()} {COMPANY_NAME} · For internal use only
         </p>
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.4; }
+        }
+        input::placeholder { color: rgba(255,255,255,0.22) !important; opacity: 1; }
+        input:-webkit-autofill,
+        input:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px #0A1626 inset !important;
+          -webkit-text-fill-color: #E2E8F0 !important;
+          caret-color: #E2E8F0 !important;
+        }
+      `}</style>
     </div>
   );
 }

@@ -68,8 +68,8 @@ router.post('/request-access', async (req, res) => {
     const { name, employeeId, email, phone, plant, area, department, designation, password } = req.body;
 
     // ── Validate required fields ──
+    // name is optional — Super Admin assigns it during approval.
     const missing = [];
-    if (!name)        missing.push('name');
     if (!employeeId)  missing.push('employeeId');
     if (!email)       missing.push('email');
     if (!password)    missing.push('password');
@@ -96,18 +96,19 @@ router.post('/request-access', async (req, res) => {
 
     // ── Create user ──
     const user = await User.create({
-      name,
-      employeeId: employeeId.toUpperCase(),
-      email:      email.toLowerCase(),
-      phone:      phone   || null,
-      plant:      plant   || null,
-      area:       area    || null,
-      department: department || null,
+      // name is optional from the form — Super Admin fills it in during approval.
+      name:        name || employeeId.toUpperCase(),
+      employeeId:  employeeId.toUpperCase(),
+      email:       email.toLowerCase(),
+      phone:       phone   || null,
+      plant:       plant   || null,
+      area:        area    || null,
+      department:  department || null,
       designation: designation || null,
-      password:   hashedPassword,
-      status:     'pending',
-      role:       'employee',
-      isApproved: false,
+      password:    hashedPassword,
+      status:      'pending',
+      role:        'employee',
+      isApproved:  false,
     });
 
     res.status(201).json({
