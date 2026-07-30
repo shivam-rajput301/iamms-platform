@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   children: ReactNode;
 }
@@ -11,6 +11,7 @@ export function Button({ variant = 'primary', size = 'md', className, children, 
   const variants = {
     primary: 'btn-primary',
     secondary: 'btn-secondary',
+    outline: 'btn-outline',
     ghost: 'btn-ghost',
     danger: 'btn-danger',
   };

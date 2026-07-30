@@ -23,7 +23,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-steel-950/60" onClick={onClose} />
-      <div className={cn('relative w-full rounded-2xl bg-white border border-steel-200 shadow-2xl dark:bg-steel-900 dark:border-steel-800 animate-slide-up', sizes[size])}>
+      <div className={cn('relative w-full rounded-xl bg-white border border-steel-200 shadow-xl dark:bg-steel-900 dark:border-steel-800 animate-slide-up', sizes[size])}>
         <div className="flex items-start justify-between px-6 py-4 border-b border-steel-200 dark:border-steel-800">
           <div>
             <h2 className="text-lg font-bold tracking-tight text-steel-900 dark:text-steel-100">{title}</h2>

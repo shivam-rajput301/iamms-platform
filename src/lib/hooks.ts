@@ -9,7 +9,7 @@ import {
 } from '@/lib/api';
 import type { Asset, InventoryItem, MaintenanceLog, MaintenanceRequest, Profile } from '@/lib/types';
 
-const STALE = { staleTime: 30 * 1000 };
+const STALE = { staleTime: 5 * 1000, refetchInterval: 10 * 1000 };
 
 // ===== Departments =====
 export function useDepartments() {

@@ -1,5 +1,9 @@
-export type Role = 'super_admin' | 'manager' | 'engineer' | 'employee';
-export type UserApprovalStatus = 'pending' | 'approved' | 'rejected' | 'blocked';
+export type Role = "super_admin" | "manager" | "engineer" | "employee";
+export type UserApprovalStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "blocked";
 
 export interface PendingUser {
   _id: string;
@@ -20,22 +24,38 @@ export interface PendingUser {
   updatedAt: string;
 }
 
-export type DepartmentType = 'production' | 'maintenance' | 'support';
-export type AssetStatus = 'operational' | 'active' | 'under_maintenance' | 'breakdown' | 'idle' | 'retired';
-export type Criticality = 'low' | 'medium' | 'high' | 'critical';
-export type Priority = 'low' | 'medium' | 'high' | 'critical';
-export type RequestStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'closed';
-export type LogType = 'update' | 'assignment' | 'completion' | 'note';
-export type MaintenanceType = 'preventive' | 'corrective' | 'predictive' | 'emergency' | 'inspection';
+export type DepartmentType = "production" | "maintenance" | "support";
+export type AssetStatus =
+  | "operational"
+  | "active"
+  | "under_maintenance"
+  | "breakdown"
+  | "idle"
+  | "retired";
+export type Criticality = "low" | "medium" | "high" | "critical";
+export type Priority = "low" | "medium" | "high" | "critical";
+export type RequestStatus =
+  | "pending"
+  | "assigned"
+  | "in_progress"
+  | "completed"
+  | "closed";
+export type LogType = "update" | "assignment" | "completion" | "note";
+export type MaintenanceType =
+  | "preventive"
+  | "corrective"
+  | "predictive"
+  | "emergency"
+  | "inspection";
 export type AssetType =
-  | 'production_equipment'
-  | 'mechanical_equipment'
-  | 'electrical_equipment'
-  | 'instrumentation'
-  | 'it_asset'
-  | 'facility_asset'
-  | 'vehicle'
-  | 'tool';
+  | "production_equipment"
+  | "mechanical_equipment"
+  | "electrical_equipment"
+  | "instrumentation"
+  | "it_asset"
+  | "facility_asset"
+  | "vehicle"
+  | "tool";
 
 export interface Profile {
   id: string;

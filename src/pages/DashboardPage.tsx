@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Factory,
   Wrench,
@@ -18,7 +18,7 @@ import {
   Bell,
   History,
   MessageSquare,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -35,29 +35,61 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-} from 'recharts';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Card, CardBody, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
-import { PageLoader } from '@/components/ui/Spinner';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Modal } from '@/components/ui/Modal';
-import { Textarea } from '@/components/ui/Input';
-import { PriorityBadge, RequestStatusBadge } from '@/components/ui/StatusBadges';
-import { useAssets, useRequests, useInventory, useEngineers, useNotifications, useSubmitRating, useRequestLogs } from '@/lib/hooks';
-import { useAuth } from '@/lib/auth';
-import { PRIORITY_META, REQUEST_STATUS_META } from '@/lib/constants';
-import { formatNumber, timeAgo, formatDate, cn } from '@/lib/utils';
-import type { MaintenanceRequest } from '@/lib/types';
+} from "recharts";
+import { PageHeader } from "@/components/ui/PageHeader";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/Table";
+import { PageLoader } from "@/components/ui/Spinner";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Modal } from "@/components/ui/Modal";
+import { Textarea } from "@/components/ui/Input";
+import {
+  PriorityBadge,
+  RequestStatusBadge,
+} from "@/components/ui/StatusBadges";
+import {
+  useAssets,
+  useRequests,
+  useInventory,
+  useEngineers,
+  useNotifications,
+  useSubmitRating,
+  useRequestLogs,
+} from "@/lib/hooks";
+import { useAuth } from "@/lib/auth";
+import { PRIORITY_META, REQUEST_STATUS_META } from "@/lib/constants";
+import { formatNumber, timeAgo, formatDate, cn } from "@/lib/utils";
+import type { MaintenanceRequest } from "@/lib/types";
 
-const DARK_CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#64748B'];
+const DARK_CHART_COLORS = [
+  "#3B82F6",
+  "#10B981",
+  "#F59E0B",
+  "#EF4444",
+  "#8B5CF6",
+  "#06B6D4",
+  "#64748B",
+];
 
 export function DashboardPage() {
   const { profile } = useAuth();
 
-  if (profile?.role === 'employee') {
+  if (profile?.role === "employee") {
     return <EmployeeDashboard />;
   }
 
@@ -75,52 +107,64 @@ function EmployeeDashboard() {
   const submitRatingMutation = useSubmitRating();
 
   const [supportModalOpen, setSupportModalOpen] = useState(false);
-  const [ratingModalRequest, setRatingModalRequest] = useState<MaintenanceRequest | null>(null);
+  const [ratingModalRequest, setRatingModalRequest] =
+    useState<MaintenanceRequest | null>(null);
   const [starRating, setStarRating] = useState<number>(5);
-  const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackComment, setFeedbackComment] = useState("");
   const [selectedRequestId] = useState<string | null>(null);
 
   /* 1. Shared employee request dataset */
   const myRequests = useMemo(() => {
     if (!profile?.id) return requests;
-    return requests.filter((r) => r.requested_by === profile.id || r.requester?.id === profile.id);
+    return requests.filter(
+      (r) => r.requested_by === profile.id || r.requester?.id === profile.id,
+    );
   }, [requests, profile]);
 
   /* 2. My Open Requests: status NOT completed, closed, or cancelled */
   const openRequestsCount = useMemo(() => {
     return myRequests.filter(
-      (r) => r.status !== 'completed' && r.status !== 'closed' && (r.status as string) !== 'cancelled'
+      (r) =>
+        r.status !== "completed" &&
+        r.status !== "closed" &&
+        (r.status as string) !== "cancelled",
     ).length;
   }, [myRequests]);
 
   /* 3. My Completed Requests: status completed or closed */
   const completedRequestsCount = useMemo(() => {
-    return myRequests.filter((r) => r.status === 'completed' || r.status === 'closed').length;
+    return myRequests.filter(
+      (r) => r.status === "completed" || r.status === "closed",
+    ).length;
   }, [myRequests]);
 
   /* 4. Pending Approval: status pending */
   const pendingApprovalCount = useMemo(() => {
-    return myRequests.filter((r) => r.status === 'pending').length;
+    return myRequests.filter((r) => r.status === "pending").length;
   }, [myRequests]);
 
   /* 5. Average Resolution Time: calculated from completed requests */
   const avgResolutionDisplay = useMemo(() => {
-    const completedList = myRequests.filter((r) => r.status === 'completed' || r.status === 'closed');
-    if (completedList.length === 0) return 'N/A';
+    const completedList = myRequests.filter(
+      (r) => r.status === "completed" || r.status === "closed",
+    );
+    if (completedList.length === 0) return "N/A";
 
     let totalMs = 0;
     let validCount = 0;
 
     completedList.forEach((r) => {
       const created = new Date(r.created_at).getTime();
-      const ended = r.completed_at ? new Date(r.completed_at).getTime() : new Date(r.updated_at).getTime();
+      const ended = r.completed_at
+        ? new Date(r.completed_at).getTime()
+        : new Date(r.updated_at).getTime();
       if (!isNaN(created) && !isNaN(ended) && ended >= created) {
-        totalMs += (ended - created);
+        totalMs += ended - created;
         validCount++;
       }
     });
 
-    if (validCount === 0) return 'N/A';
+    if (validCount === 0) return "N/A";
 
     const avgHours = totalMs / (1000 * 60 * 60 * validCount);
     if (avgHours >= 24) {
@@ -135,28 +179,36 @@ function EmployeeDashboard() {
       const found = myRequests.find((r) => r.id === selectedRequestId);
       if (found) return found;
     }
-    return myRequests.find((r) => r.status !== 'completed' && r.status !== 'closed') || myRequests[0] || null;
+    return (
+      myRequests.find(
+        (r) => r.status !== "completed" && r.status !== "closed",
+      ) ||
+      myRequests[0] ||
+      null
+    );
   }, [myRequests, selectedRequestId]);
 
   /* 3. Notifications relevant only to logged-in employee */
   const myNotifications = useMemo(() => {
     if (!profile?.id) return notifications.slice(0, 5);
-    return notifications.filter((n) => {
-      if (n.user_id && n.user_id === profile.id) return true;
-      const t = n.title.toLowerCase();
-      const m = n.message.toLowerCase();
-      return (
-        t.includes('submitted') ||
-        t.includes('approved') ||
-        t.includes('assigned') ||
-        t.includes('work') ||
-        t.includes('resolved') ||
-        t.includes('completed') ||
-        t.includes('spare') ||
-        t.includes('rate') ||
-        m.includes('your request')
-      );
-    }).slice(0, 5);
+    return notifications
+      .filter((n) => {
+        if (n.user_id && n.user_id === profile.id) return true;
+        const t = n.title.toLowerCase();
+        const m = n.message.toLowerCase();
+        return (
+          t.includes("submitted") ||
+          t.includes("approved") ||
+          t.includes("assigned") ||
+          t.includes("work") ||
+          t.includes("resolved") ||
+          t.includes("completed") ||
+          t.includes("spare") ||
+          t.includes("rate") ||
+          m.includes("your request")
+        );
+      })
+      .slice(0, 5);
   }, [notifications, profile]);
 
   if (rLoading) return <PageLoader />;
@@ -171,18 +223,18 @@ function EmployeeDashboard() {
         feedback_comment: feedbackComment.trim() || undefined,
       });
     } catch (err) {
-      console.error('[submit-rating-error]', err);
+      console.error("[submit-rating-error]", err);
     } finally {
       setRatingModalRequest(null);
       setStarRating(5);
-      setFeedbackComment('');
+      setFeedbackComment("");
     }
   }
 
   return (
     <div className="animate-fade-in space-y-6">
       <PageHeader
-        title={`Welcome, ${profile?.full_name?.split(' ')[0] ?? 'Employee'}`}
+        title={`Welcome, ${profile?.full_name?.split(" ")[0] ?? "Employee"}`}
         description="Track your maintenance requests, equipment status & submit service feedback."
         actions={
           <Link to="/requests/new">
@@ -199,7 +251,9 @@ function EmployeeDashboard() {
         <Card hover>
           <CardBody className="p-4 flex flex-col justify-between h-full space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-steel-500 dark:text-steel-400">My Open Requests</span>
+              <span className="text-xs font-semibold text-steel-500 dark:text-steel-400">
+                My Open Requests
+              </span>
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400">
                 <Wrench className="h-3.5 w-3.5" />
               </div>
@@ -209,7 +263,9 @@ function EmployeeDashboard() {
                 {openRequestsCount}
               </p>
               <p className="mt-1 text-[11px] font-medium text-steel-500 dark:text-steel-400">
-                {openRequestsCount === 0 ? 'No active requests' : `${openRequestsCount} active request${openRequestsCount > 1 ? 's' : ''} in queue`}
+                {openRequestsCount === 0
+                  ? "No active requests"
+                  : `${openRequestsCount} active request${openRequestsCount > 1 ? "s" : ""} in queue`}
               </p>
             </div>
           </CardBody>
@@ -219,7 +275,9 @@ function EmployeeDashboard() {
         <Card hover>
           <CardBody className="p-4 flex flex-col justify-between h-full space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-steel-500 dark:text-steel-400">My Completed Requests</span>
+              <span className="text-xs font-semibold text-steel-500 dark:text-steel-400">
+                My Completed Requests
+              </span>
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                 <CheckCircle2 className="h-3.5 w-3.5" />
               </div>
@@ -239,7 +297,9 @@ function EmployeeDashboard() {
         <Card hover>
           <CardBody className="p-4 flex flex-col justify-between h-full space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-steel-500 dark:text-steel-400">Pending Approval</span>
+              <span className="text-xs font-semibold text-steel-500 dark:text-steel-400">
+                Pending Approval
+              </span>
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400">
                 <Clock className="h-3.5 w-3.5" />
               </div>
@@ -249,7 +309,9 @@ function EmployeeDashboard() {
                 {pendingApprovalCount}
               </p>
               <p className="mt-1 text-[11px] font-medium text-steel-500 dark:text-steel-400">
-                {pendingApprovalCount === 0 ? 'No pending approvals' : 'Awaiting manager approval'}
+                {pendingApprovalCount === 0
+                  ? "No pending approvals"
+                  : "Awaiting manager approval"}
               </p>
             </div>
           </CardBody>
@@ -259,7 +321,9 @@ function EmployeeDashboard() {
         <Card hover>
           <CardBody className="p-4 flex flex-col justify-between h-full space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-steel-500 dark:text-steel-400">Average Resolution Time</span>
+              <span className="text-xs font-semibold text-steel-500 dark:text-steel-400">
+                Average Resolution Time
+              </span>
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
                 <TrendingUp className="h-3.5 w-3.5" />
               </div>
@@ -269,7 +333,9 @@ function EmployeeDashboard() {
                 {avgResolutionDisplay}
               </p>
               <p className="mt-1 text-[11px] font-medium text-steel-500 dark:text-steel-400">
-                {avgResolutionDisplay === 'N/A' ? 'No completed requests' : 'Based on completed requests'}
+                {avgResolutionDisplay === "N/A"
+                  ? "No completed requests"
+                  : "Based on completed requests"}
               </p>
             </div>
           </CardBody>
@@ -285,8 +351,12 @@ function EmployeeDashboard() {
                 <Plus className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-xs font-bold text-steel-900 dark:text-white">Raise Maintenance Request</h4>
-                <p className="text-[11px] text-steel-400">Report equipment fault or breakdown</p>
+                <h4 className="text-xs font-bold text-steel-900 dark:text-white">
+                  Raise Maintenance Request
+                </h4>
+                <p className="text-[11px] text-steel-400">
+                  Report equipment fault or breakdown
+                </p>
               </div>
             </CardBody>
           </Card>
@@ -299,8 +369,12 @@ function EmployeeDashboard() {
                 <Wrench className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-xs font-bold text-steel-900 dark:text-white">View My Requests</h4>
-                <p className="text-[11px] text-steel-400">Track all your submitted work orders</p>
+                <h4 className="text-xs font-bold text-steel-900 dark:text-white">
+                  View My Requests
+                </h4>
+                <p className="text-[11px] text-steel-400">
+                  Track all your submitted work orders
+                </p>
               </div>
             </CardBody>
           </Card>
@@ -313,22 +387,33 @@ function EmployeeDashboard() {
                 <QrCode className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-xs font-bold text-steel-900 dark:text-white">Scan QR to Report Asset</h4>
-                <p className="text-[11px] text-steel-400">Scan physical barcode / QR label</p>
+                <h4 className="text-xs font-bold text-steel-900 dark:text-white">
+                  Scan QR to Report Asset
+                </h4>
+                <p className="text-[11px] text-steel-400">
+                  Scan physical barcode / QR label
+                </p>
               </div>
             </CardBody>
           </Card>
         </Link>
 
-        <button onClick={() => setSupportModalOpen(true)} className="group text-left w-full">
+        <button
+          onClick={() => setSupportModalOpen(true)}
+          className="group text-left w-full"
+        >
           <Card hover className="h-full">
             <CardBody className="p-4 flex items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-steel-800 text-steel-300">
                 <PhoneCall className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-xs font-bold text-steel-900 dark:text-white">Contact Maintenance Team</h4>
-                <p className="text-[11px] text-steel-400">Call Plant Support & Control Desk</p>
+                <h4 className="text-xs font-bold text-steel-900 dark:text-white">
+                  Contact Maintenance Team
+                </h4>
+                <p className="text-[11px] text-steel-400">
+                  Call Plant Support & Control Desk
+                </p>
               </div>
             </CardBody>
           </Card>
@@ -343,9 +428,15 @@ function EmployeeDashboard() {
             <CardHeader className="flex items-center justify-between">
               <div>
                 <CardTitle>My Maintenance Requests</CardTitle>
-                <CardDescription>Filtered to requests created by you ({myRequests.length} total)</CardDescription>
+                <CardDescription>
+                  Filtered to requests created by you ({myRequests.length}{" "}
+                  total)
+                </CardDescription>
               </div>
-              <Link to="/requests" className="flex items-center gap-1 text-xs font-semibold text-brand-400 hover:text-brand-300">
+              <Link
+                to="/requests"
+                className="flex items-center gap-1 text-xs font-semibold text-brand-400 hover:text-brand-300"
+              >
                 View All <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </CardHeader>
@@ -381,20 +472,27 @@ function EmployeeDashboard() {
                   </TableHeader>
                   <TableBody>
                     {myRequests.map((r) => {
-                      const isCompleted = r.status === 'completed' || r.status === 'closed';
+                      const isCompleted =
+                        r.status === "completed" || r.status === "closed";
                       const existingRating = r.rating;
 
                       /* Calculate expected completion date */
                       const expectedCompDate = r.completed_at
                         ? formatDate(r.completed_at)
                         : r.estimated_hours
-                        ? `${r.estimated_hours} Hours Est.`
-                        : '28 Jul 2026';
+                          ? `${r.estimated_hours} Hours Est.`
+                          : "28 Jul 2026";
 
                       return (
                         <TableRow
                           key={r.id}
-                          className={cn('cursor-pointer', (selectedRequestId === r.id || (!selectedRequestId && r.request_code === 'MR-2026-021')) && 'bg-brand-500/10 border-l-2 border-brand-500 dark:bg-brand-500/15')}
+                          className={cn(
+                            "cursor-pointer",
+                            (selectedRequestId === r.id ||
+                              (!selectedRequestId &&
+                                r.request_code === "MR-2026-021")) &&
+                              "bg-brand-500/10 border-l-2 border-brand-500 dark:bg-brand-500/15",
+                          )}
                           onClick={() => navigate(`/requests/${r.id}`)}
                         >
                           <TableCell>
@@ -402,30 +500,47 @@ function EmployeeDashboard() {
                               {r.request_code}
                             </span>
                           </TableCell>
-                          <TableCell className="font-medium text-steel-200">{r.asset?.name ?? '—'}</TableCell>
-                          <TableCell className="max-w-xs truncate text-xs text-steel-300">{r.title}</TableCell>
-                          <TableCell><PriorityBadge priority={r.priority} /></TableCell>
-                          <TableCell><RequestStatusBadge status={r.status} /></TableCell>
+                          <TableCell className="font-medium text-steel-200">
+                            {r.asset?.name ?? "—"}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate text-xs text-steel-300">
+                            {r.title}
+                          </TableCell>
+                          <TableCell>
+                            <PriorityBadge priority={r.priority} />
+                          </TableCell>
+                          <TableCell>
+                            <RequestStatusBadge status={r.status} />
+                          </TableCell>
                           <TableCell>
                             {r.engineer ? (
                               <span className="flex items-center gap-1.5">
                                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600/80 text-[10px] font-bold text-white">
                                   {r.engineer.full_name.charAt(0)}
                                 </span>
-                                <span className="text-xs text-steel-200">{r.engineer.full_name}</span>
+                                <span className="text-xs text-steel-200">
+                                  {r.engineer.full_name}
+                                </span>
                               </span>
                             ) : (
-                              <span className="text-xs text-steel-500 italic">Rahul Sharma</span>
+                              <span className="text-xs text-steel-500 italic">
+                                Rahul Sharma
+                              </span>
                             )}
                           </TableCell>
-                          <TableCell className="text-xs text-steel-400">{expectedCompDate}</TableCell>
-                          <TableCell className="text-xs text-steel-400">{formatDate(r.created_at)}</TableCell>
+                          <TableCell className="text-xs text-steel-400">
+                            {expectedCompDate}
+                          </TableCell>
+                          <TableCell className="text-xs text-steel-400">
+                            {formatDate(r.created_at)}
+                          </TableCell>
                           <TableCell className="text-right">
                             {/* 4. Service Rating section - displayed ONLY for Completed requests */}
                             {isCompleted ? (
                               existingRating ? (
                                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-400">
-                                  <Star className="h-3.5 w-3.5 fill-amber-400" /> {existingRating}/5
+                                  <Star className="h-3.5 w-3.5 fill-amber-400" />{" "}
+                                  {existingRating}/5
                                 </span>
                               ) : (
                                 <Button
@@ -441,8 +556,15 @@ function EmployeeDashboard() {
                                 </Button>
                               )
                             ) : (
-                              <Link to={`/requests/${r.id}`} onClick={(e) => e.stopPropagation()}>
-                                <Button size="sm" variant="ghost" className="text-xs py-1 px-2 h-7">
+                              <Link
+                                to={`/requests/${r.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-xs py-1 px-2 h-7"
+                                >
                                   Details
                                 </Button>
                               </Link>
@@ -462,13 +584,32 @@ function EmployeeDashboard() {
             <Card>
               <CardHeader className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Request Timeline ({activeTimelineRequest.request_code})</CardTitle>
+                  <CardTitle>
+                    Request Timeline ({activeTimelineRequest.request_code})
+                  </CardTitle>
                   <CardDescription>
-                    Asset: <strong className="text-steel-200">{activeTimelineRequest.asset?.name ?? 'Cold Rolling Mill #2 Drive Motor'}</strong> | Dept: <strong className="text-steel-200">{activeTimelineRequest.asset?.department?.name ?? 'Rolling Mill'}</strong>
+                    Asset:{" "}
+                    <strong className="text-steel-200">
+                      {activeTimelineRequest.asset?.name ??
+                        "Cold Rolling Mill #2 Drive Motor"}
+                    </strong>{" "}
+                    | Dept:{" "}
+                    <strong className="text-steel-200">
+                      {activeTimelineRequest.asset?.department?.name ??
+                        "Rolling Mill"}
+                    </strong>
                   </CardDescription>
                 </div>
-                <Badge variant={activeTimelineRequest.status === 'in_progress' ? 'warning' : 'default'} dot="bg-amber-400">
-                  {REQUEST_STATUS_META[activeTimelineRequest.status]?.label ?? activeTimelineRequest.status}
+                <Badge
+                  variant={
+                    activeTimelineRequest.status === "in_progress"
+                      ? "warning"
+                      : "default"
+                  }
+                  dot="bg-amber-400"
+                >
+                  {REQUEST_STATUS_META[activeTimelineRequest.status]?.label ??
+                    activeTimelineRequest.status}
                 </Badge>
               </CardHeader>
               <CardBody className="p-5">
@@ -487,15 +628,26 @@ function EmployeeDashboard() {
             </CardHeader>
             <CardBody className="p-0 divide-y divide-steel-800/60">
               {myNotifications.length === 0 ? (
-                <p className="p-6 text-center text-xs text-steel-400">No recent notifications for your requests.</p>
+                <p className="p-6 text-center text-xs text-steel-400">
+                  No recent notifications for your requests.
+                </p>
               ) : (
                 myNotifications.map((n) => (
-                  <div key={n.id} className="p-4 hover:bg-steel-800/30 transition-colors">
+                  <div
+                    key={n.id}
+                    className="p-4 hover:bg-steel-800/30 transition-colors"
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold text-steel-200">{n.title}</p>
-                      <span className="text-[10px] text-steel-500">{timeAgo(n.created_at)}</span>
+                      <p className="text-xs font-semibold text-steel-200">
+                        {n.title}
+                      </p>
+                      <span className="text-[10px] text-steel-500">
+                        {timeAgo(n.created_at)}
+                      </span>
                     </div>
-                    <p className="mt-1 text-[11px] text-steel-400 leading-relaxed">{n.message}</p>
+                    <p className="mt-1 text-[11px] text-steel-400 leading-relaxed">
+                      {n.message}
+                    </p>
                   </div>
                 ))
               )}
@@ -509,16 +661,28 @@ function EmployeeDashboard() {
             </CardHeader>
             <CardBody className="p-4 space-y-3 text-xs">
               <div className="flex items-center justify-between py-1.5 border-b border-steel-800">
-                <span className="text-steel-400 font-medium">Control Desk Ext</span>
-                <span className="font-mono text-steel-200 font-semibold">Ext. 4400 / 4401</span>
+                <span className="text-steel-400 font-medium">
+                  Control Desk Ext
+                </span>
+                <span className="font-mono text-steel-200 font-semibold">
+                  Ext. 4400 / 4401
+                </span>
               </div>
               <div className="flex items-center justify-between py-1.5 border-b border-steel-800">
-                <span className="text-steel-400 font-medium">Emergency Hotline</span>
-                <span className="font-mono text-rose-400 font-bold">+91 1800-444-990</span>
+                <span className="text-steel-400 font-medium">
+                  Emergency Hotline
+                </span>
+                <span className="font-mono text-rose-400 font-bold">
+                  +91 1800-444-990
+                </span>
               </div>
               <div className="flex items-center justify-between py-1.5">
-                <span className="text-steel-400 font-medium">Support Email</span>
-                <span className="text-brand-400 font-mono">support@iamms.com</span>
+                <span className="text-steel-400 font-medium">
+                  Support Email
+                </span>
+                <span className="text-brand-400 font-mono">
+                  support@iamms.com
+                </span>
               </div>
             </CardBody>
           </Card>
@@ -532,19 +696,35 @@ function EmployeeDashboard() {
         title="Contact Plant Maintenance Control"
         description="For emergency equipment breakdowns or immediate assistance."
         footer={
-          <Button variant="secondary" onClick={() => setSupportModalOpen(false)}>Close</Button>
+          <Button
+            variant="secondary"
+            onClick={() => setSupportModalOpen(false)}
+          >
+            Close
+          </Button>
         }
       >
         <div className="space-y-4 text-xs text-steel-300">
           <div className="rounded-lg border border-steel-800 bg-steel-950/60 p-4 space-y-2">
-            <h4 className="font-bold text-white uppercase text-[11px] tracking-wider">Maintenance Control Room</h4>
-            <p><strong>Location:</strong> Plant Central Workshop, Bay 4</p>
-            <p><strong>Internal Extension:</strong> 4400 / 4401</p>
-            <p><strong>Email:</strong> maintenance.control@iamms.com</p>
-            <p><strong>Shift Hours:</strong> 24x7 Continuous Plant Coverage</p>
+            <h4 className="font-bold text-white uppercase text-[11px] tracking-wider">
+              Maintenance Control Room
+            </h4>
+            <p>
+              <strong>Location:</strong> Plant Central Workshop, Bay 4
+            </p>
+            <p>
+              <strong>Internal Extension:</strong> 4400 / 4401
+            </p>
+            <p>
+              <strong>Email:</strong> maintenance.control@iamms.com
+            </p>
+            <p>
+              <strong>Shift Hours:</strong> 24x7 Continuous Plant Coverage
+            </p>
           </div>
           <p className="text-steel-400">
-            For urgent breakdown issues, please submit a maintenance request with <strong>Critical</strong> priority directly through the system.
+            For urgent breakdown issues, please submit a maintenance request
+            with <strong>Critical</strong> priority directly through the system.
           </p>
         </div>
       </Modal>
@@ -557,9 +737,19 @@ function EmployeeDashboard() {
         description={`Request ID: ${ratingModalRequest?.request_code} (${ratingModalRequest?.title})`}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setRatingModalRequest(null)}>Cancel</Button>
-            <Button onClick={handleRatingSubmit} disabled={submitRatingMutation.isPending}>
-              {submitRatingMutation.isPending ? 'Submitting…' : 'Submit Feedback'}
+            <Button
+              variant="secondary"
+              onClick={() => setRatingModalRequest(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRatingSubmit}
+              disabled={submitRatingMutation.isPending}
+            >
+              {submitRatingMutation.isPending
+                ? "Submitting…"
+                : "Submit Feedback"}
             </Button>
           </>
         }
@@ -575,10 +765,19 @@ function EmployeeDashboard() {
                   onClick={() => setStarRating(star)}
                   className="p-1 text-amber-400 transition-transform hover:scale-110"
                 >
-                  <Star className={cn('h-7 w-7', star <= starRating ? 'fill-amber-400 text-amber-400' : 'text-steel-700')} />
+                  <Star
+                    className={cn(
+                      "h-7 w-7",
+                      star <= starRating
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-steel-700",
+                    )}
+                  />
                 </button>
               ))}
-              <span className="ml-2 text-sm font-bold text-amber-400">{starRating} / 5 Stars</span>
+              <span className="ml-2 text-sm font-bold text-amber-400">
+                {starRating} / 5 Stars
+              </span>
             </div>
           </div>
 
@@ -598,56 +797,99 @@ function EmployeeDashboard() {
 function DetailedRequestTimeline({ request }: { request: MaintenanceRequest }) {
   const { data: logs = [] } = useRequestLogs(request.id);
 
-  const isAssigned = !!request.assigned_engineer || request.status === 'assigned' || request.status === 'in_progress' || request.status === 'completed' || request.status === 'closed';
-  const isStarted = request.status === 'in_progress' || request.status === 'completed' || request.status === 'closed';
-  const isCompleted = request.status === 'completed' || request.status === 'closed';
+  const isAssigned =
+    !!request.assigned_engineer ||
+    request.status === "assigned" ||
+    request.status === "in_progress" ||
+    request.status === "completed" ||
+    request.status === "closed";
+  const isStarted =
+    request.status === "in_progress" ||
+    request.status === "completed" ||
+    request.status === "closed";
+  const isCompleted =
+    request.status === "completed" || request.status === "closed";
 
   const stages = [
-    { label: 'Request Submitted', state: 'done' },
-    { label: 'Manager Approved', state: 'done' },
-    { label: 'Engineer Assigned', state: isAssigned ? 'done' : 'pending' },
-    { label: 'Work Started', state: isStarted ? 'current' : 'pending' },
-    { label: 'Spare Parts Ordered', state: isCompleted ? 'done' : 'pending' },
-    { label: 'Completed', state: isCompleted ? 'done' : 'pending' },
+    { label: "Request Submitted", state: "done" },
+    { label: "Manager Approved", state: "done" },
+    { label: "Engineer Assigned", state: isAssigned ? "done" : "pending" },
+    { label: "Work Started", state: isStarted ? "current" : "pending" },
+    { label: "Spare Parts Ordered", state: isCompleted ? "done" : "pending" },
+    { label: "Completed", state: isCompleted ? "done" : "pending" },
   ];
 
   /* Calculation of progress % */
-  const progressPercent = isCompleted ? 100 : isStarted ? 70 : isAssigned ? 40 : 20;
+  const progressPercent = isCompleted
+    ? 100
+    : isStarted
+      ? 70
+      : isAssigned
+        ? 40
+        : 20;
 
   /* Filter logs for complaint history and engineer comments */
-  const historyLogs = logs.filter((l) => l.note?.toLowerCase().includes('complaint') || l.note?.toLowerCase().includes('vibration') || l.note?.toLowerCase().includes('leakage') || l.note?.toLowerCase().includes('overheating'));
-
+  const historyLogs = logs.filter(
+    (l) =>
+      l.note?.toLowerCase().includes("complaint") ||
+      l.note?.toLowerCase().includes("vibration") ||
+      l.note?.toLowerCase().includes("leakage") ||
+      l.note?.toLowerCase().includes("overheating"),
+  );
 
   return (
     <div className="space-y-6">
       {/* Dynamic Progress Bar */}
       <div>
         <div className="flex items-center justify-between text-xs mb-1.5">
-          <span className="font-semibold text-steel-300">Overall Repair Progress</span>
-          <span className="font-mono font-bold text-brand-400">{progressPercent}%</span>
+          <span className="font-semibold text-steel-300">
+            Overall Repair Progress
+          </span>
+          <span className="font-mono font-bold text-brand-400">
+            {progressPercent}%
+          </span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-steel-800">
-          <div className="h-full bg-brand-500 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+          <div
+            className="h-full bg-brand-500 rounded-full transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
       </div>
 
       {/* Stage Indicators */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
         {stages.map((stage) => {
-          const isDone = stage.state === 'done';
-          const isCurrent = stage.state === 'current';
+          const isDone = stage.state === "done";
+          const isCurrent = stage.state === "current";
 
           return (
-            <div key={stage.label} className="flex flex-col items-center text-center">
+            <div
+              key={stage.label}
+              className="flex flex-col items-center text-center"
+            >
               <div
                 className={cn(
-                  'flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all',
-                  isDone ? 'bg-emerald-500 text-slate-950 ring-4 ring-emerald-500/20' : isCurrent ? 'bg-amber-500 text-slate-950 ring-4 ring-amber-500/20 animate-pulse' : 'bg-steel-800 text-steel-500 border border-steel-700'
+                  "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all",
+                  isDone
+                    ? "bg-emerald-500 text-slate-950 ring-4 ring-emerald-500/20"
+                    : isCurrent
+                      ? "bg-amber-500 text-slate-950 ring-4 ring-amber-500/20 animate-pulse"
+                      : "bg-steel-800 text-steel-500 border border-steel-700",
                 )}
               >
-                {isDone ? '✓' : isCurrent ? '⏳' : '○'}
+                {isDone ? "✓" : isCurrent ? "⏳" : "○"}
               </div>
-              <p className={cn('mt-2 text-[11px] font-semibold', isDone ? 'text-steel-200' : isCurrent ? 'text-amber-400 font-bold' : 'text-steel-500')}>
+              <p
+                className={cn(
+                  "mt-2 text-[11px] font-semibold",
+                  isDone
+                    ? "text-steel-200"
+                    : isCurrent
+                      ? "text-amber-400 font-bold"
+                      : "text-steel-500",
+                )}
+              >
                 {stage.label}
               </p>
             </div>
@@ -658,16 +900,28 @@ function DetailedRequestTimeline({ request }: { request: MaintenanceRequest }) {
       {/* Metadata Row */}
       <div className="rounded-lg bg-steel-50 p-3.5 border border-steel-200 dark:bg-steel-900 dark:border-steel-800 grid gap-3 sm:grid-cols-3 text-xs text-steel-700 dark:text-steel-300">
         <div>
-          <span className="text-steel-500 dark:text-steel-400 block text-[11px]">Assigned Engineer:</span>
-          <span className="font-semibold text-steel-900 dark:text-white">{request.engineer?.full_name ?? 'Rahul Sharma'}</span>
+          <span className="text-steel-500 dark:text-steel-400 block text-[11px]">
+            Assigned Engineer:
+          </span>
+          <span className="font-semibold text-steel-900 dark:text-white">
+            {request.engineer?.full_name ?? "Rahul Sharma"}
+          </span>
         </div>
         <div>
-          <span className="text-steel-500 dark:text-steel-400 block text-[11px]">Department:</span>
-          <span className="font-semibold text-steel-900 dark:text-white">{request.asset?.department?.name ?? 'Rolling Mill'}</span>
+          <span className="text-steel-500 dark:text-steel-400 block text-[11px]">
+            Department:
+          </span>
+          <span className="font-semibold text-steel-900 dark:text-white">
+            {request.asset?.department?.name ?? "Rolling Mill"}
+          </span>
         </div>
         <div>
-          <span className="text-steel-500 dark:text-steel-400 block text-[11px]">Expected Completion:</span>
-          <span className="font-mono text-brand-600 dark:text-brand-400 font-semibold">28 Jul 2026</span>
+          <span className="text-steel-500 dark:text-steel-400 block text-[11px]">
+            Expected Completion:
+          </span>
+          <span className="font-mono text-brand-600 dark:text-brand-400 font-semibold">
+            28 Jul 2026
+          </span>
         </div>
       </div>
 
@@ -679,11 +933,19 @@ function DetailedRequestTimeline({ request }: { request: MaintenanceRequest }) {
             <span>Previous Complaint History</span>
           </div>
           <ul className="space-y-1.5 text-[11px] text-steel-700 dark:text-steel-300">
-            <li className="flex items-center gap-1.5">• Bearing vibration (Jan 2026)</li>
-            <li className="flex items-center gap-1.5">• Oil leakage (Mar 2026)</li>
-            <li className="flex items-center gap-1.5">• Motor overheating (Jun 2026)</li>
+            <li className="flex items-center gap-1.5">
+              • Bearing vibration (Jan 2026)
+            </li>
+            <li className="flex items-center gap-1.5">
+              • Oil leakage (Mar 2026)
+            </li>
+            <li className="flex items-center gap-1.5">
+              • Motor overheating (Jun 2026)
+            </li>
             {historyLogs.map((l) => (
-              <li key={l.id} className="flex items-center gap-1.5">• {l.note}</li>
+              <li key={l.id} className="flex items-center gap-1.5">
+                • {l.note}
+              </li>
             ))}
           </ul>
         </div>
@@ -694,7 +956,8 @@ function DetailedRequestTimeline({ request }: { request: MaintenanceRequest }) {
             <span>Engineer Comments</span>
           </div>
           <div className="rounded-md bg-white p-2.5 border border-steel-200 text-[11px] text-steel-800 italic dark:bg-steel-950 dark:border-steel-800 dark:text-steel-200">
-            "Engineer: {request.repair_notes || 'Bearing replacement in progress.'}"
+            "Engineer:{" "}
+            {request.repair_notes || "Bearing replacement in progress."}"
           </div>
         </div>
       </div>
@@ -713,12 +976,22 @@ function PlantWideDashboard() {
   const { data: engineers = [] } = useEngineers();
 
   const stats = useMemo(() => {
-    const active = assets.filter((a) => a.status === 'operational' || a.status === 'active').length;
-    const under = assets.filter((a) => a.status === 'under_maintenance').length;
-    const critical = assets.filter((a) => a.status === 'breakdown' || a.criticality === 'critical').length;
-    const pending = requests.filter((r) => r.status === 'pending' || r.status === 'assigned').length;
-    const completed = requests.filter((r) => r.status === 'completed' || r.status === 'closed').length;
-    const lowStock = inventory.filter((i) => i.quantity <= i.minimum_stock).length;
+    const active = assets.filter(
+      (a) => a.status === "operational" || a.status === "active",
+    ).length;
+    const under = assets.filter((a) => a.status === "under_maintenance").length;
+    const critical = assets.filter(
+      (a) => a.status === "breakdown" || a.criticality === "critical",
+    ).length;
+    const pending = requests.filter(
+      (r) => r.status === "pending" || r.status === "assigned",
+    ).length;
+    const completed = requests.filter(
+      (r) => r.status === "completed" || r.status === "closed",
+    ).length;
+    const lowStock = inventory.filter(
+      (i) => i.quantity <= i.minimum_stock,
+    ).length;
     return {
       totalAssets: assets.length,
       activeAssets: active,
@@ -732,19 +1005,22 @@ function PlantWideDashboard() {
   }, [assets, requests, inventory, engineers]);
 
   const monthlyData = useMemo(() => {
-    const months: Record<string, { month: string; requests: number; completed: number; cost: number }> = {};
+    const months: Record<
+      string,
+      { month: string; requests: number; completed: number; cost: number }
+    > = {};
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = d.toLocaleString('en-IN', { month: 'short' });
+      const key = d.toLocaleString("en-IN", { month: "short" });
       months[key] = { month: key, requests: 0, completed: 0, cost: 0 };
     }
     requests.forEach((r) => {
       const d = new Date(r.created_at);
-      const key = d.toLocaleString('en-IN', { month: 'short' });
+      const key = d.toLocaleString("en-IN", { month: "short" });
       if (months[key]) {
         months[key].requests += 1;
-        if (r.status === 'completed' || r.status === 'closed') {
+        if (r.status === "completed" || r.status === "closed") {
           months[key].completed += 1;
           months[key].cost += Number(r.maintenance_cost ?? 0);
         }
@@ -767,7 +1043,7 @@ function PlantWideDashboard() {
   const deptData = useMemo(() => {
     const map: Record<string, number> = {};
     assets.forEach((a) => {
-      const name = a.department?.name ?? 'Unassigned';
+      const name = a.department?.name ?? "Unassigned";
       map[name] = (map[name] ?? 0) + 1;
     });
     return Object.entries(map).map(([name, value]) => ({ name, value }));
@@ -776,24 +1052,75 @@ function PlantWideDashboard() {
   const breakdownData = useMemo(() => {
     const map: Record<string, number> = {};
     assets.forEach((a) => {
-      if (a.status === 'breakdown' || a.status === 'under_maintenance') {
+      if (a.status === "breakdown" || a.status === "under_maintenance") {
         map[a.category] = (map[a.category] ?? 0) + 1;
       }
     });
-    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6);
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
   }, [assets]);
 
   if (aLoading || rLoading || iLoading) return <PageLoader />;
 
   const kpis = [
-    { label: 'Total Industrial Assets', value: stats.totalAssets, icon: Factory, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', to: '/assets' },
-    { label: 'Operational Assets', value: stats.activeAssets, icon: CheckCircle2, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', to: '/assets?status=active' },
-    { label: 'Under Maintenance', value: stats.underMaintenance, icon: Wrench, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', to: '/assets?status=under_maintenance' },
-    { label: 'Critical Breakdowns', value: stats.criticalAssets, icon: AlertCircle, color: 'text-rose-400 bg-rose-500/10 border-rose-500/20', to: '/assets?status=breakdown' },
-    { label: 'Active Engineers', value: stats.totalEngineers, icon: Users, color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20', to: '/settings' },
-    { label: 'Pending Work Orders', value: stats.pendingRequests, icon: Clock, color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20', to: '/requests?status=pending' },
-    { label: 'Closed Work Orders', value: stats.completedRequests, icon: ClipboardCheck, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', to: '/requests?status=completed' },
-    { label: 'Low Stock Alerts', value: stats.lowStockAlerts, icon: Package, color: 'text-orange-400 bg-orange-500/10 border-orange-500/20', to: '/inventory?low=1' },
+    {
+      label: "Total Industrial Assets",
+      value: stats.totalAssets,
+      icon: Factory,
+      color: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+      to: "/assets",
+    },
+    {
+      label: "Operational Assets",
+      value: stats.activeAssets,
+      icon: CheckCircle2,
+      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      to: "/assets?status=active",
+    },
+    {
+      label: "Under Maintenance",
+      value: stats.underMaintenance,
+      icon: Wrench,
+      color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+      to: "/assets?status=under_maintenance",
+    },
+    {
+      label: "Critical Breakdowns",
+      value: stats.criticalAssets,
+      icon: AlertCircle,
+      color: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+      to: "/assets?status=breakdown",
+    },
+    {
+      label: "Active Engineers",
+      value: stats.totalEngineers,
+      icon: Users,
+      color: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
+      to: "/settings",
+    },
+    {
+      label: "Pending Work Orders",
+      value: stats.pendingRequests,
+      icon: Clock,
+      color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+      to: "/requests?status=pending",
+    },
+    {
+      label: "Closed Work Orders",
+      value: stats.completedRequests,
+      icon: ClipboardCheck,
+      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      to: "/requests?status=completed",
+    },
+    {
+      label: "Low Stock Alerts",
+      value: stats.lowStockAlerts,
+      icon: Package,
+      color: "text-orange-400 bg-orange-500/10 border-orange-500/20",
+      to: "/inventory?low=1",
+    },
   ];
 
   const recentRequests = requests.slice(0, 6);
@@ -801,7 +1128,7 @@ function PlantWideDashboard() {
   return (
     <div className="animate-fade-in space-y-6">
       <PageHeader
-        title={`Welcome back, ${profile?.full_name?.split(' ')[0] ?? 'User'}`}
+        title={`Welcome back, ${profile?.full_name?.split(" ")[0] ?? "User"}`}
         description="Real-time industrial asset health, work orders & maintenance metrics."
       />
 
@@ -809,14 +1136,29 @@ function PlantWideDashboard() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {kpis.map((k) => (
           <Link key={k.label} to={k.to} className="group">
-            <Card hover className="h-full">
-              <CardBody className="p-4 flex items-center gap-3.5">
-                <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', k.color)}>
-                  <k.icon className="h-5 w-5" />
+            <Card hover className="h-full border-steel-200 bg-white shadow-sm hover:border-steel-300">
+              <CardBody className="p-4 flex flex-col justify-between h-full space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-steel-500">
+                    {k.label}
+                  </span>
+                  <div
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border shadow-sm",
+                      k.color,
+                    )}
+                  >
+                    <k.icon className="h-4 w-4" />
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xl font-bold tracking-tight text-steel-900 dark:text-white">{formatNumber(k.value)}</p>
-                  <p className="truncate text-[11px] font-medium text-steel-500 dark:text-steel-400">{k.label}</p>
+                <div>
+                  <p className="text-2xl font-extrabold tracking-tight text-steel-900">
+                    {formatNumber(k.value)}
+                  </p>
+                  <p className={cn("mt-1 flex items-center gap-1 text-[11px] font-semibold", k.trendColor)}>
+                    <TrendingUp className="h-3 w-3" />
+                    <span>{k.trend}</span>
+                  </p>
                 </div>
               </CardBody>
             </Card>
@@ -824,52 +1166,128 @@ function PlantWideDashboard() {
         ))}
       </div>
 
-      {/* Charts row 1 */}
+      {/* Charts Section */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Monthly Maintenance Trend</CardTitle>
+        <Card className="lg:col-span-2 border-steel-200 bg-white">
+          <CardHeader className="flex items-center justify-between border-b border-steel-100">
+            <div>
+              <CardTitle>Monthly Maintenance Trend</CardTitle>
+              <CardDescription>
+                Live database comparison of logged vs completed work orders
+              </CardDescription>
+            </div>
+            <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700">
+              Database Sync
+            </span>
           </CardHeader>
-          <CardBody>
+          <CardBody className="pt-4">
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient id="reqGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#0284c7" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#0284c7" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="compGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" strokeOpacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  strokeOpacity={0.8}
+                />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0D131F', borderRadius: 8, border: '1px solid #1E293B', fontSize: 12, color: '#F1F5F9' }}
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: 6,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    fontSize: 12,
+                    color: "#0f172a",
+                  }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
-                <Area type="monotone" dataKey="requests" name="Total Requests" stroke="#3B82F6" fill="url(#reqGrad)" strokeWidth={2} />
-                <Area type="monotone" dataKey="completed" name="Completed" stroke="#10B981" fill="url(#compGrad)" strokeWidth={2} />
+                <Area
+                  type="monotone"
+                  dataKey="requests"
+                  name="Total Requests"
+                  stroke="#0284c7"
+                  fill="url(#reqGrad)"
+                  strokeWidth={2}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="completed"
+                  name="Completed Work"
+                  stroke="#10b981"
+                  fill="url(#compGrad)"
+                  strokeWidth={2}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="border-steel-200 bg-white">
+          <CardHeader className="border-b border-steel-100">
             <CardTitle>Asset Health Distribution</CardTitle>
+            <CardDescription>
+              Database asset condition score breakdown
+            </CardDescription>
           </CardHeader>
-          <CardBody>
+          <CardBody className="pt-4">
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
-                <Pie data={healthData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={4}>
+                <Pie
+                  data={healthData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={85}
+                  paddingAngle={4}
+                >
                   {healthData.map((_, i) => (
-                    <Cell key={i} fill={DARK_CHART_COLORS[i % DARK_CHART_COLORS.length]} stroke="#111827" strokeWidth={2} />
+                    <Cell
+                      key={i}
+                      fill={
+                        i === 0
+                          ? "#10b981"
+                          : i === 1
+                            ? "#0284c7"
+                            : i === 2
+                              ? "#f59e0b"
+                              : "#ef4444"
+                      }
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#0D131F', borderRadius: 8, border: '1px solid #1E293B', fontSize: 12, color: '#F1F5F9' }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: 6,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    fontSize: 12,
+                    color: "#0f172a",
+                  }}
+                />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -877,106 +1295,155 @@ function PlantWideDashboard() {
         </Card>
       </div>
 
-      {/* Charts row 2 */}
+      {/* Row 2 Charts */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
+        <Card className="border-steel-200 bg-white">
+          <CardHeader className="border-b border-steel-100">
             <CardTitle>Department Asset Count</CardTitle>
           </CardHeader>
-          <CardBody>
-            <ResponsiveContainer width="100%" height={240}>
+          <CardBody className="pt-4">
+            <ResponsiveContainer width="100%" height={230}>
               <BarChart data={deptData} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" strokeOpacity={0.6} horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} width={85} />
-                <Tooltip contentStyle={{ backgroundColor: '#0D131F', borderRadius: 8, border: '1px solid #1E293B', fontSize: 12, color: '#F1F5F9' }} />
-                <Bar dataKey="value" name="Assets" fill="#3B82F6" radius={[0, 4, 4, 0]} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  strokeOpacity={0.8}
+                  horizontal={false}
+                />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tick={{ fontSize: 10, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={90}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: 6,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    fontSize: 12,
+                    color: "#0f172a",
+                  }}
+                />
+                <Bar
+                  dataKey="value"
+                  name="Assets"
+                  fill="#0284c7"
+                  radius={[0, 4, 4, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Breakdown Frequency by Category</CardTitle>
+        <Card className="border-steel-200 bg-white">
+          <CardHeader className="border-b border-steel-100">
+            <CardTitle>Breakdown Frequency</CardTitle>
           </CardHeader>
-          <CardBody>
-            <ResponsiveContainer width="100%" height={240}>
+          <CardBody className="pt-4">
+            <ResponsiveContainer width="100%" height={230}>
               <BarChart data={breakdownData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" strokeOpacity={0.6} vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={50} />
-                <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#0D131F', borderRadius: 8, border: '1px solid #1E293B', fontSize: 12, color: '#F1F5F9' }} />
-                <Bar dataKey="value" name="Breakdowns" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  strokeOpacity={0.8}
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 9, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                  angle={-20}
+                  textAnchor="end"
+                  height={45}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: 6,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    fontSize: 12,
+                    color: "#0f172a",
+                  }}
+                />
+                <Bar
+                  dataKey="value"
+                  name="Breakdowns"
+                  fill="#ef4444"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="border-steel-200 bg-white">
+          <CardHeader className="border-b border-steel-100">
             <CardTitle>Maintenance Expenditure (₹)</CardTitle>
           </CardHeader>
-          <CardBody>
-            <ResponsiveContainer width="100%" height={240}>
+          <CardBody className="pt-4">
+            <ResponsiveContainer width="100%" height={230}>
               <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" strokeOpacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={{ backgroundColor: '#0D131F', borderRadius: 8, border: '1px solid #1E293B', fontSize: 12, color: '#F1F5F9' }} formatter={(v: number) => [`₹${formatNumber(v)}`, 'Expenditure']} />
-                <Line type="monotone" dataKey="cost" name="Cost" stroke="#8B5CF6" strokeWidth={2} dot={{ r: 3, fill: '#8B5CF6' }} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  strokeOpacity={0.8}
+                />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: 6,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    fontSize: 12,
+                    color: "#0f172a",
+                  }}
+                  formatter={(v: number) => [
+                    `₹${formatNumber(v)}`,
+                    "Expenditure",
+                  ]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="cost"
+                  name="Cost"
+                  stroke="#8b5cf6"
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: "#8b5cf6" }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </CardBody>
         </Card>
       </div>
-
-      {/* Recent Work Orders */}
-      <Card>
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle>Recent Work Orders & Requests</CardTitle>
-          <Link to="/requests" className="flex items-center gap-1 text-xs font-semibold text-brand-400 hover:text-brand-300">
-            View All Requests <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </CardHeader>
-        <CardBody className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Request Code</TableHead>
-                <TableHead>Equipment / Asset</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Logged Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentRequests.map((r) => {
-                const priorityVariant = r.priority === 'critical' ? 'danger' : r.priority === 'high' ? 'warning' : 'info';
-                const statusVariant = r.status === 'completed' || r.status === 'closed' ? 'success' : r.status === 'in_progress' ? 'warning' : 'default';
-
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono text-xs font-semibold text-brand-400">{r.request_code}</TableCell>
-                    <TableCell className="font-medium text-steel-800 dark:text-steel-200">{r.asset?.name ?? '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant={priorityVariant}>
-                        {PRIORITY_META[r.priority]?.label ?? r.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant} dot={r.status === 'in_progress' ? 'bg-amber-400' : undefined}>
-                        {REQUEST_STATUS_META[r.status]?.label ?? r.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-steel-500 dark:text-steel-400">{timeAgo(r.created_at)}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardBody>
-      </Card>
     </div>
   );
 }

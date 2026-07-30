@@ -85,7 +85,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 className="fixed inset-0 z-10"
                 onClick={() => setNotifOpen(false)}
               />
-              <div className="absolute right-0 z-20 mt-2 w-80 origin-top-right rounded-xl border border-steel-200 bg-white shadow-elevated animate-slide-up dark:border-steel-800 dark:bg-steel-900">
+              <div className="absolute right-0 z-20 mt-2 w-80 origin-top-right rounded-xl border border-steel-200 bg-white shadow-md animate-slide-up dark:border-steel-800 dark:bg-steel-900">
                 <div className="flex items-center justify-between border-b border-steel-200 px-4 py-3 dark:border-steel-800">
                   <p className="text-sm font-semibold text-steel-800 dark:text-steel-200">
                     Notifications
@@ -162,7 +162,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 className="fixed inset-0 z-10"
                 onClick={() => setProfileOpen(false)}
               />
-              <div className="absolute right-0 z-20 mt-2 w-48 origin-top-right rounded-xl border border-steel-200 bg-white shadow-elevated animate-slide-up dark:border-steel-800 dark:bg-steel-900">
+              <div className="absolute right-0 z-20 mt-2 w-48 origin-top-right rounded-xl border border-steel-200 bg-white shadow-md animate-slide-up dark:border-steel-800 dark:bg-steel-900">
                 <button
                   onClick={() => {
                     setProfileOpen(false);
