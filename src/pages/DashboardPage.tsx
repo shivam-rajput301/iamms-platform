@@ -238,7 +238,7 @@ function EmployeeDashboard() {
   return (
     <div className="animate-fade-in space-y-6">
       <PageHeader
-        title={`Welcome, ${profile?.full_name?.split(" ")[0] ?? "Employee"}`}
+        title={`Welcome, ${getFirstName(profile?.full_name)}`}
         description="Track your maintenance requests, equipment status & submit service feedback."
         actions={
           <Link to="/requests/new">
@@ -980,25 +980,16 @@ function getGreeting() {
 }
 
 function getFirstName(fullName?: string | null): string {
-  if (!fullName) return "Shivam";
-  const trimmed = fullName.trim();
-  const parts = trimmed.split(" ").filter(Boolean);
-  if (parts.length === 0) return "Shivam";
-  const first = parts[0];
-  if (first.toLowerCase() === "super") {
-    if (parts.length > 1 && !["admin", "administrator", "user"].includes(parts[1].toLowerCase())) {
-      return parts[1];
-    }
-    return "Shivam";
-  }
-  return first;
+  if (!fullName) return "User";
+  const parts = fullName.trim().split(" ").filter(Boolean);
+  return parts[0] || "User";
 }
 
 /* ─────────────────────────────────────────────────────────────
    PLANT-WIDE DASHBOARD (Super Admin, Manager, Engineer)
 ─────────────────────────────────────────────────────────────── */
 function PlantWideDashboard() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { data: assets = [], isLoading: aLoading } = useAssets();
   const { data: requests = [], isLoading: rLoading } = useRequests();
   const { data: inventory = [], isLoading: iLoading } = useInventory();
@@ -1132,7 +1123,7 @@ function PlantWideDashboard() {
   if (aLoading || rLoading || iLoading) return <PageLoader />;
 
   const greeting = getGreeting();
-  const firstName = getFirstName(profile?.full_name);
+  const firstName = getFirstName(profile?.full_name || user?.name);
 
   const uptimePct =
     stats.totalAssets > 0

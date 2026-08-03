@@ -246,7 +246,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               className="mt-1.5 truncate text-xs font-bold"
               style={{ color: "#E2E8F0" }}
             >
-              {orgConfig.company_name && orgConfig.company_name !== "Not Configured"
+              {orgConfig.company_name &&
+              orgConfig.company_name !== "Not Configured"
                 ? orgConfig.company_name
                 : "Industrial Manufacturing Plant"}
             </p>

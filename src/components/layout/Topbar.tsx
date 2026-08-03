@@ -128,7 +128,10 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   className="flex items-center justify-between px-4 py-3"
                   style={{ borderBottom: "1px solid rgba(23,199,232,0.1)" }}
                 >
-                  <p className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: "#E2E8F0" }}
+                  >
                     Notifications
                   </p>
                   <span
@@ -225,10 +228,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               {profile?.full_name?.charAt(0) ?? "U"}
             </div>
             <div className="hidden text-left sm:block">
-              <p
-                className="text-sm font-semibold"
-                style={{ color: "#E2E8F0" }}
-              >
+              <p className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>
                 {profile?.full_name}
               </p>
               <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
