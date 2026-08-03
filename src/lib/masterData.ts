@@ -6,11 +6,13 @@
 export const APPLICATION_NAME = 'IAMMS';
 export const APPLICATION_FULL_NAME = 'Industrial Asset & Maintenance Management System';
 
-export const DEFAULT_COMPANY_NAME = 'Not Configured';
-export const DEFAULT_PLANT_NAME = 'Not Configured';
+export const DEFAULT_COMPANY_NAME = 'Industrial Manufacturing Plant';
+export const DEFAULT_PLANT_NAME = 'Renukoot Manufacturing Plant';
+export const DEFAULT_LOCATION = 'Renukoot, Sonbhadra, Uttar Pradesh, India';
 
 export const COMPANY_NAME = DEFAULT_COMPANY_NAME;
 export const PLANT_NAME = DEFAULT_PLANT_NAME;
+export const PLANT_LOCATION = DEFAULT_LOCATION;
 export const COMPANY_SHORT = APPLICATION_NAME;
 
 export type DepartmentType = 'production' | 'maintenance' | 'support';

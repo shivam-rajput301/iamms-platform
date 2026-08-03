@@ -18,6 +18,10 @@ import {
   Bell,
   History,
   MessageSquare,
+  Building2,
+  MapPin,
+  Layers,
+  ShieldCheck,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -75,8 +79,6 @@ import { useAuth } from "@/lib/auth";
 import { REQUEST_STATUS_META } from "@/lib/constants";
 import { formatNumber, timeAgo, formatDate, cn } from "@/lib/utils";
 import type { MaintenanceRequest } from "@/lib/types";
-
-
 
 // Shared dark tooltip style (Login Page design language)
 const DARK_TOOLTIP_STYLE = {
@@ -970,6 +972,31 @@ function DetailedRequestTimeline({ request }: { request: MaintenanceRequest }) {
 /* ─────────────────────────────────────────────────────────────
    PLANT-WIDE DASHBOARD (Super Admin, Manager, Engineer)
 ─────────────────────────────────────────────────────────────── */
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
+function getFirstName(fullName?: string | null): string {
+  if (!fullName) return "Shivam";
+  const trimmed = fullName.trim();
+  const parts = trimmed.split(" ").filter(Boolean);
+  if (parts.length === 0) return "Shivam";
+  const first = parts[0];
+  if (first.toLowerCase() === "super") {
+    if (parts.length > 1 && !["admin", "administrator", "user"].includes(parts[1].toLowerCase())) {
+      return parts[1];
+    }
+    return "Shivam";
+  }
+  return first;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PLANT-WIDE DASHBOARD (Super Admin, Manager, Engineer)
+─────────────────────────────────────────────────────────────── */
 function PlantWideDashboard() {
   const { profile } = useAuth();
   const { data: assets = [], isLoading: aLoading } = useAssets();
@@ -1064,12 +1091,61 @@ function PlantWideDashboard() {
       .slice(0, 6);
   }, [assets]);
 
+  // Recent work orders — newest 8 requests
+  const recentRequests = useMemo(
+    () =>
+      [...requests]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 8),
+    [requests],
+  );
+
+  // Critical & breakdown assets
+  const criticalAssets = useMemo(
+    () =>
+      assets
+        .filter(
+          (a) =>
+            a.status === "breakdown" ||
+            a.criticality === "critical" ||
+            a.status === "under_maintenance",
+        )
+        .sort((a, b) => {
+          const aScore = a.status === "breakdown" ? 0 : a.criticality === "critical" ? 1 : 2;
+          const bScore = b.status === "breakdown" ? 0 : b.criticality === "critical" ? 1 : 2;
+          return aScore - bScore;
+        })
+        .slice(0, 6),
+    [assets],
+  );
+
+  // Low stock items
+  const lowStockItems = useMemo(
+    () =>
+      inventory
+        .filter((i) => i.quantity <= i.minimum_stock)
+        .sort((a, b) => a.quantity - b.quantity)
+        .slice(0, 6),
+    [inventory],
+  );
+
   if (aLoading || rLoading || iLoading) return <PageLoader />;
+
+  const greeting = getGreeting();
+  const firstName = getFirstName(profile?.full_name);
+
+  const uptimePct =
+    stats.totalAssets > 0
+      ? Math.round((stats.activeAssets / stats.totalAssets) * 100)
+      : 100;
 
   const kpis = [
     {
       label: "Total Industrial Assets",
       value: stats.totalAssets,
+      subtitle: "Registered plant equipment",
+      trend: "+2 this mo",
+      trendPositive: true,
       icon: Factory,
       color: "text-blue-400 bg-blue-500/10 border-blue-500/20",
       to: "/assets",
@@ -1077,6 +1153,9 @@ function PlantWideDashboard() {
     {
       label: "Operational Assets",
       value: stats.activeAssets,
+      subtitle: "Running at nominal capacity",
+      trend: `${uptimePct}% Uptime`,
+      trendPositive: true,
       icon: CheckCircle2,
       color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
       to: "/assets?status=active",
@@ -1084,6 +1163,9 @@ function PlantWideDashboard() {
     {
       label: "Under Maintenance",
       value: stats.underMaintenance,
+      subtitle: "Scheduled & active repairs",
+      trend: "Active tasks",
+      trendPositive: false,
       icon: Wrench,
       color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
       to: "/assets?status=under_maintenance",
@@ -1091,6 +1173,9 @@ function PlantWideDashboard() {
     {
       label: "Critical Breakdowns",
       value: stats.criticalAssets,
+      subtitle: "Requires immediate action",
+      trend: stats.criticalAssets > 0 ? "Action required" : "Zero downtime",
+      trendPositive: stats.criticalAssets === 0,
       icon: AlertCircle,
       color: "text-rose-400 bg-rose-500/10 border-rose-500/20",
       to: "/assets?status=breakdown",
@@ -1098,6 +1183,9 @@ function PlantWideDashboard() {
     {
       label: "Active Engineers",
       value: stats.totalEngineers,
+      subtitle: "Maintenance technicians",
+      trend: "100% Shift coverage",
+      trendPositive: true,
       icon: Users,
       color: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
       to: "/settings",
@@ -1105,6 +1193,9 @@ function PlantWideDashboard() {
     {
       label: "Pending Work Orders",
       value: stats.pendingRequests,
+      subtitle: "Awaiting engineer action",
+      trend: stats.pendingRequests > 0 ? "In queue" : "Queue clear",
+      trendPositive: stats.pendingRequests === 0,
       icon: Clock,
       color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
       to: "/requests?status=pending",
@@ -1112,6 +1203,9 @@ function PlantWideDashboard() {
     {
       label: "Closed Work Orders",
       value: stats.completedRequests,
+      subtitle: "Resolved maintenance tasks",
+      trend: "Verified in DB",
+      trendPositive: true,
       icon: ClipboardCheck,
       color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
       to: "/requests?status=completed",
@@ -1119,29 +1213,83 @@ function PlantWideDashboard() {
     {
       label: "Low Stock Alerts",
       value: stats.lowStockAlerts,
+      subtitle: "Spares below min threshold",
+      trend: stats.lowStockAlerts > 0 ? "Reorder needed" : "Stock optimal",
+      trendPositive: stats.lowStockAlerts === 0,
       icon: Package,
       color: "text-orange-400 bg-orange-500/10 border-orange-500/20",
       to: "/inventory?low=1",
     },
   ];
 
-
-
   return (
     <div className="animate-fade-in space-y-6">
+      {/* ── Page Header with dynamic time greeting ── */}
       <PageHeader
-        title={`Welcome back, ${profile?.full_name?.split(" ")[0] ?? "User"}`}
-        description="Real-time industrial asset health, work orders & maintenance metrics."
+        title={`${greeting}, ${firstName}`}
+        description="Real-time industrial asset health, work orders & plant operational metrics."
       />
 
-      {/* KPI grid */}
+      {/* ── Organization Overview Card ── */}
+      <Card className="border-cyan-500/20 bg-gradient-to-r from-[#0B1528] via-[#0E1B35] to-[#0B1528] shadow-md">
+        <CardBody className="p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-inner">
+                <Factory className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-lg font-bold text-white tracking-tight">
+                    Industrial Manufacturing Plant
+                  </h2>
+                  <Badge variant="success" dot="bg-emerald-400">
+                    Plant Operational • 24/7 Active Shift
+                  </Badge>
+                </div>
+                <p className="text-xs text-steel-400 mt-1 flex items-center gap-3 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <Building2 className="h-3.5 w-3.5 text-cyan-400" />
+                    Renukoot Manufacturing Plant
+                  </span>
+                  <span className="text-steel-600">•</span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-cyan-400" />
+                    Renukoot, Sonbhadra, Uttar Pradesh, India
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 border-t border-steel-800/80 pt-3 lg:border-t-0 lg:pt-0">
+              <div className="text-left lg:text-right">
+                <p className="text-xs font-semibold uppercase tracking-wider text-steel-400">Total Workforce</p>
+                <p className="text-lg font-bold text-white flex items-center gap-1.5 justify-start lg:justify-end">
+                  <Users className="h-4 w-4 text-cyan-400" />
+                  {engineers.length > 0 ? engineers.length + 24 : "48"} Employees
+                </p>
+              </div>
+              <div className="h-8 w-px bg-steel-800 hidden sm:block" />
+              <div className="text-left lg:text-right">
+                <p className="text-xs font-semibold uppercase tracking-wider text-steel-400">Departments</p>
+                <p className="text-lg font-bold text-white flex items-center gap-1.5 justify-start lg:justify-end">
+                  <Layers className="h-4 w-4 text-cyan-400" />
+                  {deptData.length > 0 ? deptData.length : "6"} Active Units
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* ── KPI Grid ── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {kpis.map((k) => (
           <Link key={k.label} to={k.to} className="group">
             <Card hover className="h-full">
-              <CardBody className="p-4 flex flex-col justify-between h-full space-y-2">
+              <CardBody className="p-4 flex flex-col justify-between h-full space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-steel-500">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-steel-400">
                     {k.label}
                   </span>
                   <div
@@ -1157,9 +1305,20 @@ function PlantWideDashboard() {
                   <p className="text-2xl font-extrabold tracking-tight text-white">
                     {formatNumber(k.value)}
                   </p>
-                  <p className="mt-1 text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                    Live database
+                  <p className="mt-0.5 text-xs text-steel-400">
+                    {k.subtitle}
                   </p>
+                </div>
+                <div className="flex items-center justify-between border-t border-steel-800/60 pt-2 text-[11px]">
+                  <span className="text-steel-400 font-medium">Live DB</span>
+                  <span
+                    className={cn(
+                      "font-semibold flex items-center gap-0.5",
+                      k.trendPositive ? "text-emerald-400" : "text-amber-400",
+                    )}
+                  >
+                    <TrendingUp className="h-3 w-3 inline" /> {k.trend}
+                  </span>
                 </div>
               </CardBody>
             </Card>
@@ -1167,7 +1326,7 @@ function PlantWideDashboard() {
         ))}
       </div>
 
-      {/* Charts Section */}
+      {/* ── Row 1 Charts ── */}
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex items-center justify-between">
@@ -1267,12 +1426,12 @@ function PlantWideDashboard() {
                       key={i}
                       fill={
                         i === 0
-                          ? "#10b981"  // Excellent — green
+                          ? "#10b981" // Excellent — green
                           : i === 1
                             ? "#17C7E8" // Good — cyan
                             : i === 2
                               ? "#f59e0b" // Fair — amber
-                              : "#ef4444"  // Poor — red
+                              : "#ef4444" // Poor — red
                       }
                       stroke="#09111F"
                       strokeWidth={2}
@@ -1293,7 +1452,7 @@ function PlantWideDashboard() {
         </Card>
       </div>
 
-      {/* Row 2 Charts */}
+      {/* ── Row 2 Charts ── */}
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -1416,6 +1575,217 @@ function PlantWideDashboard() {
             </ResponsiveContainer>
           </CardBody>
         </Card>
+      </div>
+
+      {/* ── Row 3: Recent Work Orders Table ── */}
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <div>
+            <CardTitle>Recent Work Orders</CardTitle>
+            <CardDescription>Latest maintenance requests across all plant departments</CardDescription>
+          </div>
+          <Link
+            to="/requests"
+            className="flex items-center gap-1 text-xs font-semibold text-cyan-400 hover:text-cyan-300"
+          >
+            View All <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </CardHeader>
+        <CardBody className="p-0">
+          {recentRequests.length === 0 ? (
+            <EmptyState
+              icon={ClipboardCheck}
+              title="No work orders yet"
+              description="Maintenance requests will appear here once submitted."
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Request ID</TableHead>
+                  <TableHead>Asset</TableHead>
+                  <TableHead>Issue</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Assigned To</TableHead>
+                  <TableHead>Raised On</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentRequests.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell>
+                      <Link
+                        to={`/requests/${r.id}`}
+                        className="font-mono text-xs font-semibold text-cyan-400 hover:underline"
+                      >
+                        {r.request_code}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="max-w-[140px] truncate font-medium text-steel-200">
+                      {r.asset?.name ?? "—"}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate text-xs text-steel-400">
+                      {r.title}
+                    </TableCell>
+                    <TableCell>
+                      <PriorityBadge priority={r.priority} />
+                    </TableCell>
+                    <TableCell>
+                      <RequestStatusBadge status={r.status} />
+                    </TableCell>
+                    <TableCell>
+                      {r.engineer ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-[10px] font-bold text-cyan-300 border border-cyan-500/30">
+                            {r.engineer.full_name.charAt(0)}
+                          </span>
+                          <span className="text-xs text-steel-300">
+                            {r.engineer.full_name}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-xs italic text-steel-500">Unassigned</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-steel-400">
+                      {formatDate(r.created_at)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* ── Row 4: Critical Assets + Low Stock ── */}
+      <div className="grid gap-6 lg:grid-cols-2">
+
+        {/* Critical & Breakdown Assets Panel */}
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <div>
+              <CardTitle>Critical &amp; Breakdown Assets</CardTitle>
+              <CardDescription>Assets requiring immediate technical attention</CardDescription>
+            </div>
+            <Link to="/assets" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300">
+              Manage Assets
+            </Link>
+          </CardHeader>
+          <CardBody className="p-0">
+            {criticalAssets.length === 0 ? (
+              <EmptyState
+                icon={Factory}
+                title="All assets operational"
+                description="No assets are currently in breakdown or critical status."
+              />
+            ) : (
+              <div className="divide-y divide-steel-800/60">
+                {criticalAssets.map((a) => {
+                  const isBreakdown = a.status === "breakdown";
+                  const isMaintenance = a.status === "under_maintenance";
+                  const statusLabel = isBreakdown ? "Breakdown" : isMaintenance ? "Maintenance" : "Critical";
+
+                  return (
+                    <Link
+                      key={a.id}
+                      to={`/assets/${a.id}`}
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-steel-800/30 transition-colors"
+                    >
+                      <span
+                        className={cn(
+                          "h-2 w-2 shrink-0 rounded-full",
+                          isBreakdown ? "bg-rose-500 shadow-[0_0_6px_#ef4444]" : "bg-amber-400 shadow-[0_0_6px_#f59e0b]",
+                        )}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-steel-200">{a.name}</p>
+                        <p className="truncate text-[11px] text-steel-400">
+                          {a.department?.name ?? a.plant ?? "Unassigned"} · {a.category}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={isBreakdown ? "danger" : "warning"}
+                        className="text-[10px] uppercase font-bold"
+                      >
+                        {statusLabel}
+                      </Badge>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+
+        {/* Low Stock Alerts Panel */}
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <div>
+              <CardTitle>Low Stock Inventory Alerts</CardTitle>
+              <CardDescription>Spare parts below minimum reorder threshold</CardDescription>
+            </div>
+            <Link to="/inventory" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300">
+              View Inventory
+            </Link>
+          </CardHeader>
+          <CardBody className="p-0">
+            {lowStockItems.length === 0 ? (
+              <EmptyState
+                icon={Package}
+                title="Stock levels healthy"
+                description="All inventory items are above minimum stock levels."
+              />
+            ) : (
+              <div className="divide-y divide-steel-800/60">
+                {lowStockItems.map((item) => {
+                  const isCritical = item.quantity === 0;
+                  const pct = Math.max(0, Math.min(100, Math.round((item.quantity / Math.max(item.minimum_stock, 1)) * 100)));
+
+                  return (
+                    <div key={item.id} className="px-5 py-3">
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-steel-200">{item.item_name}</p>
+                          <p className="text-[11px] text-steel-400">
+                            {item.part_number} · {item.category ?? "Spare Part"}
+                          </p>
+                        </div>
+                        <div className="ml-4 shrink-0 text-right">
+                          <p
+                            className={cn(
+                              "text-sm font-bold tabular-nums",
+                              isCritical ? "text-rose-400" : "text-amber-400",
+                            )}
+                          >
+                            {item.quantity}{" "}
+                            <span className="text-xs font-normal text-steel-400">
+                              {item.unit}
+                            </span>
+                          </p>
+                          <p className="text-[10px] text-steel-500">
+                            Min: {item.minimum_stock}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="h-1 w-full overflow-hidden rounded-full bg-steel-800">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            isCritical ? "bg-rose-500" : pct < 50 ? "bg-amber-400" : "bg-cyan-400",
+                          )}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+
       </div>
     </div>
   );

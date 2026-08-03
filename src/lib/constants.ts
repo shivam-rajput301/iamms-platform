@@ -43,9 +43,9 @@ export {
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
-  super_admin: "Super Admin",
+  super_admin: "Super Administrator",
   manager: "Maintenance Manager",
-  engineer: "Engineer",
+  engineer: "Maintenance Engineer",
   employee: "Employee",
 };
 
