@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,11 +16,20 @@ interface AssetFormPageProps {
   assetId?: string;
 }
 
-export function AssetFormPage({ mode, assetId }: AssetFormPageProps) {
+export function AssetFormPage({ mode, assetId: propAssetId }: AssetFormPageProps) {
   const navigate = useNavigate();
+  const { id: paramId } = useParams<{ id: string }>();
+  const effectiveAssetId = propAssetId || paramId;
+
   const { profile } = useAuth();
   const { data: departments = [] } = useDepartments();
-  const { data: existing, isLoading } = useAsset(mode === 'edit' ? assetId : undefined);
+  const {
+    data: existing,
+    isLoading,
+    isError,
+    error: fetchError,
+  } = useAsset(mode === 'edit' ? effectiveAssetId : undefined);
+
   const createAsset = useCreateAsset();
   const updateAsset = useUpdateAsset();
 
@@ -29,6 +38,29 @@ export function AssetFormPage({ mode, assetId }: AssetFormPageProps) {
   const [error, setError] = useState<string | null>(null);
 
   if (mode === 'edit' && isLoading) return <PageLoader />;
+
+  if (mode === 'edit' && (isError || (!isLoading && !existing))) {
+    return (
+      <div className="animate-fade-in space-y-4">
+        <button
+          onClick={() => navigate('/assets')}
+          className="flex items-center gap-1.5 text-sm text-steel-400 hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Assets
+        </button>
+        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-6 text-center text-rose-300">
+          <AlertCircle className="mx-auto h-8 w-8 text-rose-400 mb-2" />
+          <p className="font-semibold text-lg">Asset Not Found</p>
+          <p className="mt-1 text-sm text-rose-400/80">
+            {fetchError instanceof Error ? fetchError.message : 'Unable to load asset details or asset does not exist.'}
+          </p>
+          <Button variant="secondary" className="mt-4" onClick={() => navigate('/assets')}>
+            Return to Asset List
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const current = mode === 'edit' ? { ...existing, ...form } : form;
 
@@ -52,8 +84,8 @@ export function AssetFormPage({ mode, assetId }: AssetFormPageProps) {
         payload.qr_code = payload.asset_id;
         payload.created_by = profile?.id;
         await createAsset.mutateAsync(payload);
-      } else if (assetId) {
-        await updateAsset.mutateAsync({ id: assetId, ...payload });
+      } else if (effectiveAssetId) {
+        await updateAsset.mutateAsync({ id: effectiveAssetId, ...payload });
       }
       navigate('/assets');
     } catch (err) {
