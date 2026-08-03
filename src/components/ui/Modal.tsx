@@ -22,23 +22,74 @@ export function Modal({ open, onClose, title, description, children, footer, siz
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-steel-950/60" onClick={onClose} />
-      <div className={cn('relative w-full rounded-xl bg-white border border-steel-200 shadow-xl dark:bg-steel-900 dark:border-steel-800 animate-slide-up', sizes[size])}>
-        <div className="flex items-start justify-between px-6 py-4 border-b border-steel-200 dark:border-steel-800">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+        onClick={onClose}
+      />
+      {/* Modal panel — Login Page card surface */}
+      <div
+        className={cn(
+          'relative w-full rounded-xl shadow-2xl animate-slide-up',
+          sizes[size],
+        )}
+        style={{
+          backgroundColor: '#0E1628',
+          border: '1px solid rgba(23,199,232,0.15)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-start justify-between px-6 py-4"
+          style={{ borderBottom: '1px solid rgba(23,199,232,0.1)' }}
+        >
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-steel-900 dark:text-steel-100">{title}</h2>
-            {description && <p className="mt-1 text-xs text-steel-500 dark:text-steel-400">{description}</p>}
+            <h2
+              className="text-lg font-bold tracking-tight"
+              style={{ color: '#E2E8F0' }}
+            >
+              {title}
+            </h2>
+            {description && (
+              <p
+                className="mt-1 text-xs"
+                style={{ color: 'rgba(255,255,255,0.4)' }}
+              >
+                {description}
+              </p>
+            )}
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-steel-400 hover:bg-steel-100 hover:text-steel-600 dark:hover:bg-steel-800 dark:hover:text-steel-200"
+            className="rounded-lg p-1.5 transition-colors"
+            style={{ color: 'rgba(255,255,255,0.4)' }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.color = 'rgba(255,255,255,0.8)')
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')
+            }
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="px-6 py-5 max-h-[60vh] overflow-y-auto scrollbar-thin">{children}</div>
+
+        {/* Body */}
+        <div className="px-6 py-5 max-h-[60vh] overflow-y-auto scrollbar-thin">
+          {children}
+        </div>
+
+        {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-steel-200 bg-steel-50/50 dark:bg-steel-950/40 dark:border-steel-800">
+          <div
+            className="flex items-center justify-end gap-3 px-6 py-4"
+            style={{
+              borderTop: '1px solid rgba(23,199,232,0.1)',
+              backgroundColor: 'rgba(9,17,31,0.4)',
+            }}
+          >
             {footer}
           </div>
         )}

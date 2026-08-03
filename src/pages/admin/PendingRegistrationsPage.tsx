@@ -1,14 +1,30 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
-  Search, RefreshCw, Eye, CheckCircle, XCircle,
-  ChevronUp, ChevronDown, ChevronsUpDown,
-  User, Mail, Phone, MapPin, Layers, Briefcase,
-  Building2, CreditCard, Calendar, FileText, ClipboardCheck,
-  Clock, Users, ShieldCheck,
+  Search,
+  RefreshCw,
+  Eye,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Users,
+  CreditCard,
+  Mail,
+  Calendar,
+  ClipboardCheck,
+  SlidersHorizontal,
+  ArrowDownUp,
+  AlertCircle,
+  Copy,
+  Check,
 } from 'lucide-react';
-import { adminApi, getApiToken, type AdminUser, type PendingStats } from '@/lib/api';
+import {
+  adminApi,
+  getApiToken,
+  type AdminUser,
+  type PendingStats,
+} from '@/lib/api';
 import { DEPARTMENTS } from '@/lib/constants';
-import { formatDate } from '@/lib/utils';
+import { formatDate, cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -16,117 +32,75 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import {
-  Table, TableHeader, TableBody, TableRow,
-  TableHead, TableCell,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
 } from '@/components/ui/Table';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageLoader } from '@/components/ui/Spinner';
 
-/* ── Constants ───────────────────────────────────────────────── */
-const PLANTS = [
-  'Head Office', 'Plant A', 'Plant B', 'Plant C',
-  'Smelter Complex', 'Rolling Unit',
-];
+/* ── Constants ───────────────────────────────────────────────────── */
+const PAGE_SIZE = 20;
 
-const ROLE_OPTIONS = ['employee', 'engineer', 'manager'] as const;
-type AssignableRole = typeof ROLE_OPTIONS[number];
+const ROLE_OPTIONS = [
+  { value: 'employee',  label: 'Employee' },
+  { value: 'engineer',  label: 'Engineer' },
+  { value: 'manager',   label: 'Manager' },
+] as const;
+type AssignableRole = 'employee' | 'engineer' | 'manager';
 
-const PAGE_SIZE = 15;
+type StatusFilter = '' | 'pending' | 'approved' | 'rejected';
+type SortOrder    = 'newest' | 'oldest';
 
-type SortKey = keyof Pick<
-  AdminUser,
-  'employeeId' | 'name' | 'email' | 'phone' | 'plant' |
-  'department' | 'role' | 'createdAt' | 'status'
->;
+/* ── Toast ───────────────────────────────────────────────────────── */
+interface ToastState { type: 'success' | 'error'; msg: string }
 
-type SortDir = 'asc' | 'desc';
-
-/* ── Status Badge ─────────────────────────────────────────────── */
-function RegistrationStatusBadge({ status }: { status: AdminUser['status'] }) {
+/* ── Status Badge ────────────────────────────────────────────────── */
+function RegistrationBadge({ status }: { status: AdminUser['status'] }) {
   const map: Record<AdminUser['status'], { variant: 'warning' | 'success' | 'danger' | 'neutral'; label: string; dot: string }> = {
     pending:  { variant: 'warning',  label: 'Pending',  dot: 'bg-amber-500' },
     approved: { variant: 'success',  label: 'Approved', dot: 'bg-emerald-500' },
     rejected: { variant: 'danger',   label: 'Rejected', dot: 'bg-rose-500' },
-    blocked:  { variant: 'neutral',  label: 'Blocked',  dot: 'bg-steel-400' },
+    blocked:  { variant: 'neutral',  label: 'Blocked',  dot: 'bg-slate-400' },
   };
   const { variant, label, dot } = map[status] ?? map.blocked;
   return <Badge variant={variant} dot={dot}>{label}</Badge>;
 }
 
-/* ── Sortable Column Header ───────────────────────────────────── */
-function SortableHead({
-  label, sortKey, currentKey, currentDir, onSort,
-}: {
-  label: string;
-  sortKey: SortKey;
-  currentKey: SortKey;
-  currentDir: SortDir;
-  onSort: (key: SortKey) => void;
-}) {
-  const active = currentKey === sortKey;
-  return (
-    <TableHead>
-      <button
-        className="flex items-center gap-1 transition-colors hover:text-steel-700 dark:hover:text-steel-200 font-semibold uppercase tracking-wider text-xs"
-        onClick={() => onSort(sortKey)}
-      >
-        {label}
-        {active ? (
-          currentDir === 'asc'
-            ? <ChevronUp className="h-3 w-3 text-brand-500" />
-            : <ChevronDown className="h-3 w-3 text-brand-500" />
-        ) : (
-          <ChevronsUpDown className="h-3 w-3 opacity-40" />
-        )}
-      </button>
-    </TableHead>
-  );
-}
-
-/* ── Detail Row (View Modal) ──────────────────────────────────── */
-function DetailRow({ icon: Icon, label, value }: { icon: typeof User; label: string; value: string | null }) {
-  return (
-    <div className="flex items-start gap-3 py-2.5 border-b border-steel-200 dark:border-steel-800/60 last:border-0">
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 border border-brand-500/15">
-        <Icon className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-steel-500 dark:text-steel-400">{label}</p>
-        <p className="mt-0.5 text-sm font-medium text-steel-900 dark:text-steel-100">{value || '—'}</p>
-      </div>
-    </div>
-  );
-}
-
-/* ── KPI Stat Card ────────────────────────────────────────────── */
+/* ── Stat Card ───────────────────────────────────────────────────── */
 function StatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
+  icon: Icon, label, value, color,
 }: {
   icon: typeof Users;
   label: string;
   value: number | null;
-  color: 'amber' | 'emerald' | 'rose' | 'blue';
+  color: 'amber' | 'emerald' | 'rose' | 'cyan';
 }) {
-  const colors = {
-    amber:   { icon: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20',   val: 'text-amber-700 dark:text-amber-300' },
-    emerald: { icon: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', val: 'text-emerald-700 dark:text-emerald-300' },
-    rose:    { icon: 'text-rose-600 dark:text-rose-400',     bg: 'bg-rose-500/10 border-rose-500/20',     val: 'text-rose-700 dark:text-rose-300' },
-    blue:    { icon: 'text-blue-600 dark:text-blue-400',     bg: 'bg-blue-500/10 border-blue-500/20',     val: 'text-blue-700 dark:text-blue-300' },
+  const palette = {
+    amber:   { icon: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.2)',  val: '#fbbf24' },
+    emerald: { icon: '#10b981', bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.2)',  val: '#34d399' },
+    rose:    { icon: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.2)',   val: '#f87171' },
+    cyan:    { icon: '#17C7E8', bg: 'rgba(23,199,232,0.1)',  border: 'rgba(23,199,232,0.2)',  val: '#17C7E8' },
   };
-  const c = colors[color];
+  const p = palette[color];
   return (
     <Card>
       <CardBody className="flex items-center gap-4 py-4">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${c.bg}`}>
-          <Icon className={`h-5 w-5 ${c.icon}`} />
+        <div
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+          style={{ background: p.bg, border: `1px solid ${p.border}` }}
+        >
+          <Icon className="h-5 w-5" style={{ color: p.icon }} />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-medium text-steel-500 dark:text-steel-400 truncate">{label}</p>
-          <p className={`mt-0.5 text-2xl font-bold tabular-nums ${value === null ? 'text-steel-400' : c.val}`}>
+          <p className="text-xs font-medium truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            {label}
+          </p>
+          <p className="mt-0.5 text-2xl font-bold tabular-nums" style={{ color: value === null ? 'rgba(255,255,255,0.25)' : p.val }}>
             {value === null ? '—' : value}
           </p>
         </div>
@@ -135,45 +109,71 @@ function StatCard({
   );
 }
 
-/* ══════════════════════════════════════════════════════════════
-   PENDING REGISTRATIONS PAGE
-══════════════════════════════════════════════════════════════ */
+/* ── Detail Field Row ────────────────────────────────────────────── */
+function DetailField({ label, value, mono = false }: { label: string; value: string | null | undefined; mono?: boolean }) {
+  return (
+    <div
+      className="flex flex-col gap-0.5 py-3"
+      style={{ borderBottom: '1px solid rgba(23,199,232,0.08)' }}
+    >
+      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        {label}
+      </p>
+      {mono ? (
+        <code className="text-sm font-mono font-semibold" style={{ color: '#17C7E8' }}>
+          {value || '—'}
+        </code>
+      ) : (
+        <p className="text-sm font-medium" style={{ color: '#E2E8F0' }}>
+          {value || '—'}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PENDING APPROVALS PAGE
+══════════════════════════════════════════════════════════════════ */
 export function PendingRegistrationsPage() {
-  /* ── Data ── */
+
+  /* ── Data state ── */
   const [allUsers, setAllUsers]         = useState<AdminUser[]>([]);
   const [stats, setStats]               = useState<PendingStats | null>(null);
   const [loading, setLoading]           = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError]               = useState<string | null>(null);
-  const [toast, setToast]               = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [toast, setToast]               = useState<ToastState | null>(null);
 
-  /* ── Filters ── */
-  const [search, setSearch]               = useState('');
-  const [filterPlant, setFilterPlant]     = useState('');
-  const [filterDept, setFilterDept]       = useState('');
-  const [filterRole, setFilterRole]       = useState('');
-  const [filterStatus, setFilterStatus]   = useState('');
-  const [filterDate, setFilterDate]       = useState('');
+  /* ── Filter / sort state ── */
+  const [search, setSearch]             = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
+  const [sortOrder, setSortOrder]       = useState<SortOrder>('newest');
+  const [page, setPage]                 = useState(1);
 
-  /* ── Sort & Pagination ── */
-  const [sortKey, setSortKey] = useState<SortKey>('createdAt');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [page, setPage]       = useState(1);
+  /* ── View drawer ── */
+  const [viewUser, setViewUser]         = useState<AdminUser | null>(null);
 
-  /* ── Modals ── */
-  const [viewUser, setViewUser]             = useState<AdminUser | null>(null);
+  /* ── Approve modal ── */
   const [approveUser, setApproveUser]       = useState<AdminUser | null>(null);
+  const [approveName, setApproveName]       = useState('');
   const [approveRole, setApproveRole]       = useState<AssignableRole>('employee');
+  const [approveDept, setApproveDept]       = useState('');
+  const [approveDesig, setApproveDesig]     = useState('');
   const [approveLoading, setApproveLoading] = useState(false);
+  const [approveErrors, setApproveErrors]   = useState<Record<string, string>>({});
   const [setupLink, setSetupLink]           = useState<string | null>(null);
+  const [linkCopied, setLinkCopied]         = useState(false);
+
+  /* ── Reject modal ── */
   const [rejectUser, setRejectUser]         = useState<AdminUser | null>(null);
   const [rejectReason, setRejectReason]     = useState('');
   const [rejectLoading, setRejectLoading]   = useState(false);
 
-  /* ── Toast ── */
+  /* ── Toast helper ── */
   function showToast(type: 'success' | 'error', msg: string) {
     setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 4500);
   }
 
   /* ── Fetch stats ── */
@@ -183,21 +183,21 @@ export function PendingRegistrationsPage() {
       if (!getApiToken()) return;
       const data = await adminApi.getPendingStats();
       setStats(data);
-    } catch {
-      /* non-critical */
-    } finally {
-      setStatsLoading(false);
-    }
+    } catch { /* non-critical */ }
+    finally { setStatsLoading(false); }
   }, []);
 
-  /* ── Fetch users ── */
+  /* ── Fetch ALL registration users (pending + approved + rejected) ── */
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       if (!getApiToken()) throw new Error('Admin session not found. Please log in again.');
-      const data = await adminApi.getPendingUsers();
-      setAllUsers(data.users);
+      // Fetch all registration requests (no status filter — we filter client-side)
+      const data = await adminApi.getUsers({ limit: 500 });
+      // Only include users who submitted a request (exclude super_admin themselves)
+      const registrations = data.users.filter((u) => u.role !== 'super_admin');
+      setAllUsers(registrations);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load registrations.');
     } finally {
@@ -210,252 +210,259 @@ export function PendingRegistrationsPage() {
     fetchStats();
   }, [fetchUsers, fetchStats]);
 
-  useEffect(() => { handleRefresh(); }, [handleRefresh]);
-
-  /* ── Sort ── */
-  function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-    setPage(1);
-  }
-
-  /* ── Reset filters ── */
-  function resetFilters() {
-    setSearch('');
-    setFilterPlant('');
-    setFilterDept('');
-    setFilterRole('');
-    setFilterStatus('');
-    setFilterDate('');
-    setPage(1);
-  }
-
-  const hasActiveFilters = !!(search || filterPlant || filterDept || filterRole || filterStatus || filterDate);
+  // Initial load
+  useMemo(() => { handleRefresh(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Client-side filter + sort + paginate ── */
   const filtered = useMemo(() => {
     let rows = [...allUsers];
 
+    // Status filter
+    if (statusFilter) {
+      rows = rows.filter((u) => u.status === statusFilter);
+    }
+
+    // Search: Employee ID or Email
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       rows = rows.filter(
         (u) =>
-          u.name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q) ||
           (u.employeeId ?? '').toLowerCase().includes(q) ||
-          (u.phone ?? '').toLowerCase().includes(q),
+          u.email.toLowerCase().includes(q),
       );
     }
 
-    if (filterPlant)  rows = rows.filter((u) => u.plant === filterPlant);
-    if (filterDept)   rows = rows.filter((u) => u.department === filterDept);
-    if (filterRole)   rows = rows.filter((u) => u.role === filterRole);
-    if (filterStatus) rows = rows.filter((u) => u.status === filterStatus);
-
-    if (filterDate) {
-      const dStart = new Date(filterDate);
-      dStart.setHours(0, 0, 0, 0);
-      const dEnd = new Date(filterDate);
-      dEnd.setHours(23, 59, 59, 999);
-      rows = rows.filter((u) => {
-        const t = new Date(u.createdAt);
-        return t >= dStart && t <= dEnd;
-      });
-    }
-
+    // Sort by request date
     rows.sort((a, b) => {
-      const av = (a[sortKey] ?? '') as string;
-      const bv = (b[sortKey] ?? '') as string;
-      const cmp = av.localeCompare(bv, undefined, { sensitivity: 'base' });
-      return sortDir === 'asc' ? cmp : -cmp;
+      const ta = new Date(a.createdAt).getTime();
+      const tb = new Date(b.createdAt).getTime();
+      return sortOrder === 'newest' ? tb - ta : ta - tb;
     });
 
     return rows;
-  }, [allUsers, search, filterPlant, filterDept, filterRole, filterStatus, filterDate, sortKey, sortDir]);
+  }, [allUsers, statusFilter, search, sortOrder]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  /* ── Approve ── */
+  const hasActiveSearch = !!(search || statusFilter !== 'pending');
+
+  /* ── Open approve modal ── */
+  function openApprove(user: AdminUser) {
+    setApproveUser(user);
+    setApproveName(user.name || '');
+    setApproveRole((user.role as AssignableRole) || 'employee');
+    setApproveDept(user.department || '');
+    setApproveDesig(user.designation || '');
+    setApproveErrors({});
+    setSetupLink(null);
+    setLinkCopied(false);
+    setViewUser(null);
+  }
+
+  /* ── Open reject modal ── */
+  function openReject(user: AdminUser) {
+    setRejectUser(user);
+    setRejectReason('');
+    setViewUser(null);
+  }
+
+  /* ── Approve handler ── */
   async function handleApprove() {
     if (!approveUser) return;
+
+    // Validate
+    const errs: Record<string, string> = {};
+    if (!approveName.trim()) errs.name = 'Full name is required.';
+    if (!approveRole) errs.role = 'Role is required.';
+    if (!approveDept) errs.dept = 'Department is required.';
+    if (!approveDesig.trim()) errs.desig = 'Designation is required.';
+    if (Object.keys(errs).length > 0) { setApproveErrors(errs); return; }
+
     setApproveLoading(true);
     try {
+      // Step 1: Update user metadata (name, department, designation)
+      await adminApi.updateUser(approveUser._id, {
+        name:        approveName.trim(),
+        department:  approveDept,
+        designation: approveDesig.trim(),
+      });
+
+      // Step 2: Approve with role → sets status=approved, isApproved=true
       const res = await adminApi.approve(approveUser._id, approveRole);
       setSetupLink(res.setupLink);
-      setAllUsers((prev) => prev.filter((u) => u._id !== approveUser._id));
+
+      // Optimistic update: refresh the row data locally
+      setAllUsers((prev) =>
+        prev.map((u) =>
+          u._id === approveUser._id
+            ? {
+                ...u,
+                name:        approveName.trim(),
+                department:  approveDept,
+                designation: approveDesig.trim(),
+                role:        approveRole,
+                status:      'approved',
+                isApproved:  true,
+              }
+            : u,
+        ),
+      );
+
       fetchStats();
-      showToast('success', `${approveUser.name} approved as ${approveRole}.`);
-      if (!res.setupLink) setApproveUser(null);
+      showToast('success', `${approveName.trim()} approved as ${approveRole}.`);
+
+      if (!res.setupLink) {
+        setApproveUser(null);
+      }
     } catch (err: unknown) {
-      showToast('error', err instanceof Error ? err.message : 'Approval failed.');
+      showToast('error', err instanceof Error ? err.message : 'Approval failed. Please try again.');
     } finally {
       setApproveLoading(false);
     }
   }
 
-  /* ── Reject ── */
+  /* ── Reject handler ── */
   async function handleReject() {
     if (!rejectUser || !rejectReason.trim()) return;
     setRejectLoading(true);
     try {
       await adminApi.reject(rejectUser._id, rejectReason.trim());
-      setAllUsers((prev) => prev.filter((u) => u._id !== rejectUser._id));
+
+      // Optimistic update
+      setAllUsers((prev) =>
+        prev.map((u) =>
+          u._id === rejectUser._id
+            ? { ...u, status: 'rejected', rejectionReason: rejectReason.trim(), isApproved: false }
+            : u,
+        ),
+      );
+
       fetchStats();
-      showToast('success', `${rejectUser.name}'s registration rejected.`);
+      showToast('success', `Registration request rejected.`);
       setRejectUser(null);
       setRejectReason('');
     } catch (err: unknown) {
-      showToast('error', err instanceof Error ? err.message : 'Rejection failed.');
+      showToast('error', err instanceof Error ? err.message : 'Rejection failed. Please try again.');
     } finally {
       setRejectLoading(false);
     }
   }
 
-  function openApproveFromView(user: AdminUser) {
-    setViewUser(null);
-    setApproveUser(user);
-    setApproveRole('employee');
-    setSetupLink(null);
+  /* ── Copy setup link ── */
+  async function copySetupLink() {
+    if (!setupLink) return;
+    await navigator.clipboard.writeText(setupLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2500);
   }
 
-  function openRejectFromView(user: AdminUser) {
-    setViewUser(null);
-    setRejectUser(user);
-    setRejectReason('');
-  }
-
-  /* ─────────────────────────────────────────────────────────── */
+  /* ──────────────────────────────────────────────────────────────── */
   return (
     <div className="space-y-5">
 
-      {/* Toast */}
+      {/* ── Toast notification ── */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-[70] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-xl
-            ${toast.type === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/80 dark:text-emerald-300'
-              : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800/60 dark:bg-rose-950/80 dark:text-rose-300'
-            }`}
+          className={cn(
+            'fixed right-4 top-4 z-[70] flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold shadow-2xl animate-slide-up',
+            toast.type === 'success'
+              ? 'border border-emerald-500/30 bg-[rgba(14,22,40,0.98)] text-emerald-400'
+              : 'border border-red-500/30 bg-[rgba(14,22,40,0.98)] text-red-400',
+          )}
+          style={{ backdropFilter: 'blur(12px)' }}
         >
           {toast.type === 'success'
             ? <CheckCircle className="h-4 w-4 shrink-0" />
-            : <XCircle className="h-4 w-4 shrink-0" />}
+            : <AlertCircle className="h-4 w-4 shrink-0" />}
           {toast.msg}
         </div>
       )}
 
-      {/* Page Header */}
+      {/* ── Page Header ── */}
       <PageHeader
-        title="Pending Registrations"
-        description="Review and approve newly registered employees before granting system access."
+        title="Pending Approvals"
+        description="Review, approve, or reject employee registration requests."
         actions={
           <Button variant="secondary" size="sm" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
             Refresh
           </Button>
         }
       />
 
-      {/* KPI Cards */}
+      {/* ── KPI Stats ── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard icon={Clock}        label="Pending"        value={statsLoading ? null : (stats?.pending ?? 0)}       color="amber"   />
-        <StatCard icon={CheckCircle}  label="Approved Today" value={statsLoading ? null : (stats?.approvedToday ?? 0)} color="emerald" />
-        <StatCard icon={XCircle}      label="Rejected Today" value={statsLoading ? null : (stats?.rejectedToday ?? 0)} color="rose"    />
-        <StatCard icon={Users}        label="Total Waiting"  value={statsLoading ? null : (stats?.totalWaiting ?? 0)}  color="blue"    />
+        <StatCard icon={Clock}       label="Awaiting Review"  value={statsLoading ? null : (stats?.pending ?? 0)}       color="amber"   />
+        <StatCard icon={CheckCircle} label="Approved Today"   value={statsLoading ? null : (stats?.approvedToday ?? 0)} color="emerald" />
+        <StatCard icon={XCircle}     label="Rejected Today"   value={statsLoading ? null : (stats?.rejectedToday ?? 0)} color="rose"    />
+        <StatCard icon={Users}       label="Total Processed"  value={statsLoading ? null : (allUsers.length)}           color="cyan"    />
       </div>
 
-      {/* Filter Bar */}
+      {/* ── Filter + Search Bar ── */}
       <Card>
-        <CardBody className="py-3">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="relative min-w-[200px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-steel-400" />
+        <CardBody className="py-3.5">
+          <div className="flex flex-wrap items-center gap-3">
+
+            {/* Search */}
+            <div className="relative min-w-[220px] flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+              />
               <Input
-                id="reg-search"
-                placeholder="Search name, email, employee ID…"
+                id="search-registrations"
+                placeholder="Search by Employee ID or email…"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="h-9 pl-8 text-sm"
               />
             </div>
 
-            <div className="w-[140px]">
-              <Select
-                id="reg-plant"
-                value={filterPlant}
-                onChange={(e) => { setFilterPlant(e.target.value); setPage(1); }}
-                className="h-9 text-sm"
-              >
-                <option value="">All Plants</option>
-                {PLANTS.map((p) => <option key={p} value={p}>{p}</option>)}
-              </Select>
-            </div>
-
-            <div className="w-[160px]">
-              <Select
-                id="reg-dept"
-                value={filterDept}
-                onChange={(e) => { setFilterDept(e.target.value); setPage(1); }}
-                className="h-9 text-sm"
-              >
-                <option value="">All Departments</option>
-                {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </Select>
-            </div>
-
-            <div className="w-[130px]">
-              <Select
-                id="reg-role"
-                value={filterRole}
-                onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
-                className="h-9 text-sm"
-              >
-                <option value="">All Roles</option>
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+            {/* Status filter */}
+            <div className="flex items-center gap-1.5">
+              <SlidersHorizontal className="h-3.5 w-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} />
+              <div className="flex gap-1">
+                {([
+                  { val: '',         label: 'All'      },
+                  { val: 'pending',  label: 'Pending'  },
+                  { val: 'approved', label: 'Approved' },
+                  { val: 'rejected', label: 'Rejected' },
+                ] as { val: StatusFilter; label: string }[]).map(({ val, label }) => (
+                  <button
+                    key={val}
+                    onClick={() => { setStatusFilter(val); setPage(1); }}
+                    className={cn(
+                      'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-150',
+                      statusFilter === val
+                        ? 'bg-[rgba(23,199,232,0.15)] text-[#17C7E8] border border-[rgba(23,199,232,0.3)]'
+                        : 'text-[rgba(255,255,255,0.45)] hover:text-[rgba(255,255,255,0.75)] border border-transparent hover:border-[rgba(23,199,232,0.1)]',
+                    )}
+                  >
+                    {label}
+                  </button>
                 ))}
-              </Select>
+              </div>
             </div>
 
-            <div className="w-[130px]">
+            {/* Sort */}
+            <div className="flex items-center gap-1.5 ml-auto">
+              <ArrowDownUp className="h-3.5 w-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} />
               <Select
-                id="reg-status"
-                value={filterStatus}
-                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-                className="h-9 text-sm"
+                id="sort-order"
+                value={sortOrder}
+                onChange={(e) => { setSortOrder(e.target.value as SortOrder); setPage(1); }}
+                className="h-9 text-xs w-[140px]"
               >
-                <option value="">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
               </Select>
             </div>
 
-            <div className="w-[150px]">
-              <Input
-                id="reg-date"
-                type="date"
-                value={filterDate}
-                onChange={(e) => { setFilterDate(e.target.value); setPage(1); }}
-                className="h-9 text-sm"
-              />
-            </div>
-
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 shrink-0">
-                <XCircle className="h-3.5 w-3.5" />
-                Reset
-              </Button>
-            )}
-
+            {/* Result count */}
             {!loading && (
-              <p className="ml-auto shrink-0 self-center text-xs text-steel-500 dark:text-steel-400">
-                <span className="font-semibold text-steel-700 dark:text-steel-200">{filtered.length}</span>
+              <p className="text-xs shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                <span className="font-semibold" style={{ color: '#E2E8F0' }}>{filtered.length}</span>
                 {' '}result{filtered.length !== 1 ? 's' : ''}
               </p>
             )}
@@ -463,27 +470,34 @@ export function PendingRegistrationsPage() {
         </CardBody>
       </Card>
 
-      {/* Table */}
+      {/* ── Table ── */}
       {loading ? (
         <PageLoader />
       ) : error ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-sm text-rose-500">
+        <div
+          className="flex items-center justify-center gap-2.5 rounded-xl py-16 text-sm"
+          style={{ color: '#f87171', border: '1px solid rgba(239,68,68,0.15)', background: 'rgba(239,68,68,0.05)' }}
+        >
           <XCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={ClipboardCheck}
-          title={hasActiveFilters ? 'No matching registrations' : 'No pending registrations'}
+          title={hasActiveSearch ? 'No matching requests' : 'No pending approvals'}
           description={
-            hasActiveFilters
-              ? 'Try adjusting your filters to find what you are looking for.'
-              : 'All access requests have been processed.'
+            hasActiveSearch
+              ? 'Try adjusting your search or status filter.'
+              : 'All registration requests have been processed.'
           }
           action={
-            hasActiveFilters ? (
-              <Button variant="secondary" size="sm" onClick={resetFilters}>
-                Reset Filters
+            hasActiveSearch ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => { setSearch(''); setStatusFilter('pending'); setPage(1); }}
+              >
+                Clear Filters
               </Button>
             ) : undefined
           }
@@ -493,102 +507,127 @@ export function PendingRegistrationsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHead label="Employee ID"    sortKey="employeeId"  currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                <SortableHead label="Full Name"      sortKey="name"        currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                <SortableHead label="Email"          sortKey="email"       currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                <SortableHead label="Phone"          sortKey="phone"       currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                <SortableHead label="Plant"          sortKey="plant"       currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                <SortableHead label="Department"     sortKey="department"  currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                <SortableHead label="Role Requested" sortKey="role"        currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                <SortableHead label="Reg. Date"      sortKey="createdAt"   currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                <SortableHead label="Status"         sortKey="status"      currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
+                <TableHead>Employee ID</TableHead>
+                <TableHead>Official Email</TableHead>
+                <TableHead>Request Date</TableHead>
+                <TableHead>Current Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginated.map((user) => (
                 <TableRow key={user._id}>
+                  {/* Employee ID */}
                   <TableCell>
-                    <code className="font-mono text-xs text-brand-600 dark:text-brand-400">
+                    <code
+                      className="font-mono text-xs font-semibold"
+                      style={{ color: '#17C7E8' }}
+                    >
                       {user.employeeId || '—'}
                     </code>
                   </TableCell>
 
+                  {/* Official Email */}
                   <TableCell>
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-[11px] font-bold text-white">
-                        {user.name.charAt(0).toUpperCase()}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+                        style={{
+                          background: 'linear-gradient(135deg, #17C7E8, #0da8c8)',
+                          color: '#080F1E',
+                        }}
+                      >
+                        {user.name?.charAt(0)?.toUpperCase() ?? user.email.charAt(0).toUpperCase()}
                       </div>
-                      <span className="whitespace-nowrap font-medium text-steel-900 dark:text-steel-100">
-                        {user.name}
+                      <span
+                        className="text-xs font-medium"
+                        style={{ color: '#CBD5E1' }}
+                      >
+                        {user.email}
                       </span>
                     </div>
                   </TableCell>
 
-                  <TableCell className="text-steel-600 dark:text-steel-400">
-                    {user.email}
-                  </TableCell>
-
-                  <TableCell className="whitespace-nowrap text-steel-600 dark:text-steel-400">
-                    {user.phone || '—'}
-                  </TableCell>
-
-                  <TableCell className="text-steel-600 dark:text-steel-400">
-                    {user.plant || '—'}
-                  </TableCell>
-
-                  <TableCell className="text-steel-600 dark:text-steel-400">
-                    {user.department || '—'}
-                  </TableCell>
-
+                  {/* Request Date */}
                   <TableCell>
-                    <span className="inline-flex items-center rounded border border-steel-200 bg-steel-100 px-2 py-0.5 text-[11px] font-semibold capitalize text-steel-700 dark:border-steel-700 dark:bg-steel-800 dark:text-steel-300">
-                      {user.role}
-                    </span>
-                  </TableCell>
-
-                  <TableCell className="whitespace-nowrap text-xs text-steel-500 dark:text-steel-400">
-                    <span className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
                       <Calendar className="h-3 w-3 shrink-0" />
                       {formatDate(user.createdAt)}
-                    </span>
+                    </div>
                   </TableCell>
 
+                  {/* Status */}
                   <TableCell>
-                    <RegistrationStatusBadge status={user.status} />
+                    <RegistrationBadge status={user.status} />
                   </TableCell>
 
+                  {/* Actions */}
                   <TableCell>
                     <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      {/* View Details */}
+                      <button
                         onClick={() => setViewUser(user)}
-                        className="h-7 px-2 text-xs"
+                        className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+                        style={{ color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(23,199,232,0.1)' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#E2E8F0';
+                          e.currentTarget.style.borderColor = 'rgba(23,199,232,0.25)';
+                          e.currentTarget.style.backgroundColor = 'rgba(23,199,232,0.06)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'rgba(255,255,255,0.55)';
+                          e.currentTarget.style.borderColor = 'rgba(23,199,232,0.1)';
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
                       >
-                        <Eye className="h-3.5 w-3.5" />
+                        <Eye className="h-3 w-3" />
                         View
-                      </Button>
+                      </button>
+
+                      {/* Approve — only for pending */}
                       {user.status === 'pending' && (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => { setApproveUser(user); setApproveRole('employee'); setSetupLink(null); }}
-                            className="h-7 px-2 text-xs text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                          <button
+                            onClick={() => openApprove(user)}
+                            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                            style={{
+                              color: '#34d399',
+                              border: '1px solid rgba(16,185,129,0.2)',
+                              backgroundColor: 'rgba(16,185,129,0.07)',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(16,185,129,0.14)';
+                              e.currentTarget.style.borderColor = 'rgba(16,185,129,0.35)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(16,185,129,0.07)';
+                              e.currentTarget.style.borderColor = 'rgba(16,185,129,0.2)';
+                            }}
                           >
-                            <CheckCircle className="h-3.5 w-3.5" />
+                            <CheckCircle className="h-3 w-3" />
                             Approve
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => { setRejectUser(user); setRejectReason(''); }}
-                            className="h-7 px-2 text-xs text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
+                          </button>
+
+                          <button
+                            onClick={() => openReject(user)}
+                            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                            style={{
+                              color: '#f87171',
+                              border: '1px solid rgba(239,68,68,0.2)',
+                              backgroundColor: 'rgba(239,68,68,0.07)',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.14)';
+                              e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.07)';
+                              e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)';
+                            }}
                           >
-                            <XCircle className="h-3.5 w-3.5" />
+                            <XCircle className="h-3 w-3" />
                             Reject
-                          </Button>
+                          </button>
                         </>
                       )}
                     </div>
@@ -610,13 +649,15 @@ export function PendingRegistrationsPage() {
         </div>
       )}
 
-      {/* ══ VIEW DETAIL MODAL ══ */}
+      {/* ══════════════════════════════════════════════════════════
+          VIEW DETAILS MODAL
+      ══════════════════════════════════════════════════════════ */}
       <Modal
         open={!!viewUser}
         onClose={() => setViewUser(null)}
-        title="Registration Details"
+        title="Request Details"
         description="Full registration information submitted by the employee."
-        size="xl"
+        size="md"
         footer={
           viewUser ? (
             <>
@@ -625,12 +666,20 @@ export function PendingRegistrationsPage() {
               </Button>
               {viewUser.status === 'pending' && (
                 <>
-                  <Button variant="danger" size="sm" onClick={() => openRejectFromView(viewUser)}>
-                    <XCircle className="h-4 w-4" />
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => openReject(viewUser)}
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
                     Reject
                   </Button>
-                  <Button variant="primary" size="sm" onClick={() => openApproveFromView(viewUser)}>
-                    <CheckCircle className="h-4 w-4" />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => openApprove(viewUser)}
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" />
                     Approve
                   </Button>
                 </>
@@ -640,186 +689,311 @@ export function PendingRegistrationsPage() {
         }
       >
         {viewUser && (
-          <div className="grid grid-cols-1 gap-x-10 sm:grid-cols-2">
-            {/* Personal */}
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-steel-400 dark:text-steel-500">
-                Personal Information
+          <div className="space-y-0">
+            <DetailField label="Employee ID"    value={viewUser.employeeId} mono />
+            <DetailField label="Official Email" value={viewUser.email} />
+            <DetailField label="Full Name"      value={viewUser.name || '—'} />
+            <DetailField
+              label="Request Time"
+              value={new Date(viewUser.createdAt).toLocaleString('en-IN', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })}
+            />
+            <div
+              className="flex flex-col gap-0.5 py-3"
+              style={{ borderBottom: '1px solid rgba(23,199,232,0.08)' }}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                Current Status
               </p>
-              <DetailRow icon={CreditCard} label="Employee ID" value={viewUser.employeeId} />
-              <DetailRow icon={User}       label="Full Name"   value={viewUser.name} />
-              <DetailRow icon={Mail}       label="Email"       value={viewUser.email} />
-              <DetailRow icon={Phone}      label="Phone"       value={viewUser.phone} />
-            </div>
-
-            {/* Organization */}
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-steel-400 dark:text-steel-500">
-                Organization
-              </p>
-              <DetailRow icon={ShieldCheck} label="Requested Role" value={viewUser.role ? viewUser.role.charAt(0).toUpperCase() + viewUser.role.slice(1) : null} />
-              <DetailRow icon={MapPin}      label="Plant"          value={viewUser.plant} />
-              <DetailRow icon={Building2}   label="Department"     value={viewUser.department} />
-              <DetailRow icon={Briefcase}   label="Designation"    value={viewUser.designation} />
-              <DetailRow icon={Layers}      label="Area"           value={viewUser.area} />
-            </div>
-
-            {/* Registration */}
-            <div className="mt-4 sm:col-span-2">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-steel-400 dark:text-steel-500">
-                Registration
-              </p>
-              <div className="grid grid-cols-1 gap-x-10 sm:grid-cols-2">
-                <DetailRow icon={Calendar} label="Registration Date" value={formatDate(viewUser.createdAt)} />
-                <div className="flex items-start gap-3 border-b border-steel-200 py-2.5 last:border-0 dark:border-steel-800/60">
-                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-brand-500/15 bg-brand-500/10">
-                    <ClipboardCheck className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-steel-500 dark:text-steel-400">Current Status</p>
-                    <div className="mt-1">
-                      <RegistrationStatusBadge status={viewUser.status} />
-                    </div>
-                  </div>
-                </div>
+              <div className="mt-1">
+                <RegistrationBadge status={viewUser.status} />
               </div>
             </div>
-
-            {/* Documents placeholder */}
-            <div className="mt-4 sm:col-span-2">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-steel-400 dark:text-steel-500">
-                Documents
-              </p>
-              <div className="flex items-center gap-2.5 rounded-lg border border-dashed border-steel-300 px-4 py-3 text-xs text-steel-500 dark:border-steel-700 dark:text-steel-400">
-                <FileText className="h-4 w-4 shrink-0" />
-                No documents uploaded. Document upload is not yet enabled for this registration.
+            {(viewUser.rejectionReason || viewUser.status === 'rejected') && (
+              <div className="flex flex-col gap-0.5 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  Notes / Rejection Reason
+                </p>
+                <p
+                  className="mt-0.5 rounded-lg p-2.5 text-sm"
+                  style={{
+                    background: 'rgba(239,68,68,0.06)',
+                    border: '1px solid rgba(239,68,68,0.15)',
+                    color: '#fca5a5',
+                  }}
+                >
+                  {viewUser.rejectionReason || '—'}
+                </p>
               </div>
-            </div>
+            )}
           </div>
         )}
       </Modal>
 
-      {/* ══ APPROVE MODAL ══ */}
+      {/* ══════════════════════════════════════════════════════════
+          APPROVE MODAL
+      ══════════════════════════════════════════════════════════ */}
       <Modal
         open={!!approveUser}
         onClose={() => { if (!approveLoading) { setApproveUser(null); setSetupLink(null); } }}
-        title={setupLink ? 'Registration Approved' : 'Approve Registration'}
+        title={setupLink ? 'Employee Approved' : 'Approve Registration'}
         description={
           setupLink
-            ? 'Share the password setup link below with the employee.'
-            : `Assign a system role to ${approveUser?.name ?? ''} before activating their account.`
+            ? 'The employee account has been activated.'
+            : `Assign profile details for ${approveUser?.email ?? ''} before granting access.`
         }
-        size="sm"
+        size="md"
         footer={
           !setupLink ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => setApproveUser(null)} disabled={approveLoading}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setApproveUser(null)}
+                disabled={approveLoading}
+              >
                 Cancel
               </Button>
-              <Button variant="primary" size="sm" onClick={handleApprove} disabled={approveLoading}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleApprove}
+                disabled={approveLoading}
+              >
                 {approveLoading ? (
                   <><RefreshCw className="h-4 w-4 animate-spin" /> Approving…</>
                 ) : (
-                  <><CheckCircle className="h-4 w-4" /> Approve</>
+                  <><CheckCircle className="h-4 w-4" /> Approve & Activate</>
                 )}
               </Button>
             </>
           ) : (
-            <Button variant="primary" size="sm" onClick={() => { setApproveUser(null); setSetupLink(null); }}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => { setApproveUser(null); setSetupLink(null); }}
+            >
               Done
             </Button>
           )
         }
       >
         {!setupLink ? (
-          <div className="space-y-3">
-            <p className="text-xs text-steel-500 dark:text-steel-400">
-              Approve this registration and activate this employee account? Select the role to assign:
-            </p>
-            <div className="space-y-2">
-              {ROLE_OPTIONS.map((r) => (
-                <label
-                  key={r}
-                  className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5 transition-colors
-                    ${approveRole === r
-                      ? 'border-brand-500/40 bg-brand-500/8 dark:border-brand-500/30 dark:bg-brand-500/10'
-                      : 'border-steel-200 bg-steel-50 hover:bg-steel-100 dark:border-steel-700 dark:bg-steel-800/40 dark:hover:bg-steel-800'
-                    }`}
-                >
-                  <input
-                    type="radio"
-                    name="approveRole"
-                    value={r}
-                    checked={approveRole === r}
-                    onChange={() => setApproveRole(r)}
-                    className="accent-brand-600"
-                  />
-                  <span className="text-sm font-medium capitalize text-steel-800 dark:text-steel-200">{r}</span>
-                </label>
-              ))}
+          <div className="space-y-4">
+            {/* Context */}
+            <div
+              className="rounded-lg p-3"
+              style={{
+                background: 'rgba(23,199,232,0.06)',
+                border: '1px solid rgba(23,199,232,0.12)',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <CreditCard className="h-3.5 w-3.5" style={{ color: '#17C7E8' }} />
+                <code className="text-xs font-mono" style={{ color: '#17C7E8' }}>
+                  {approveUser?.employeeId}
+                </code>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="h-3.5 w-3.5" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  {approveUser?.email}
+                </p>
+              </div>
+            </div>
+
+            {/* Full Name */}
+            <div>
+              <Input
+                id="approve-name"
+                label="Full Name *"
+                placeholder="e.g. Rajesh Kumar Sharma"
+                value={approveName}
+                onChange={(e) => { setApproveName(e.target.value); setApproveErrors((p) => ({ ...p, name: '' })); }}
+                error={approveErrors.name}
+              />
+            </div>
+
+            {/* Role */}
+            <div>
+              <p className="label">Role *</p>
+              <div className="grid grid-cols-3 gap-2">
+                {ROLE_OPTIONS.map((r) => (
+                  <label
+                    key={r.value}
+                    className={cn(
+                      'flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border px-3 py-3 transition-all duration-150',
+                      approveRole === r.value
+                        ? 'border-[rgba(23,199,232,0.4)] bg-[rgba(23,199,232,0.1)] text-[#17C7E8]'
+                        : 'border-[rgba(23,199,232,0.08)] bg-[rgba(9,17,31,0.4)] text-[rgba(255,255,255,0.45)] hover:border-[rgba(23,199,232,0.2)] hover:text-[rgba(255,255,255,0.75)]',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="approve-role"
+                      value={r.value}
+                      checked={approveRole === r.value}
+                      onChange={() => { setApproveRole(r.value); setApproveErrors((p) => ({ ...p, role: '' })); }}
+                      className="sr-only"
+                    />
+                    <span className="text-xs font-semibold">{r.label}</span>
+                  </label>
+                ))}
+              </div>
+              {approveErrors.role && (
+                <p className="mt-1 text-xs text-red-400">{approveErrors.role}</p>
+              )}
+            </div>
+
+            {/* Department */}
+            <div>
+              <Select
+                id="approve-dept"
+                label="Department *"
+                value={approveDept}
+                onChange={(e) => { setApproveDept(e.target.value); setApproveErrors((p) => ({ ...p, dept: '' })); }}
+                error={approveErrors.dept}
+              >
+                <option value="">Select department…</option>
+                {DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Designation */}
+            <div>
+              <Input
+                id="approve-desig"
+                label="Designation *"
+                placeholder="e.g. Maintenance Engineer, Shift Supervisor"
+                value={approveDesig}
+                onChange={(e) => { setApproveDesig(e.target.value); setApproveErrors((p) => ({ ...p, desig: '' })); }}
+                error={approveErrors.desig}
+              />
             </div>
           </div>
         ) : (
+          /* ── Success state ── */
           <div className="space-y-4">
-            <div className="flex items-center gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 dark:border-emerald-800/60 dark:bg-emerald-950/40">
-              <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                User approved successfully. Share the setup link below so they can set their password.
-              </p>
-            </div>
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-steel-400">Password Setup Link</p>
-              <div className="flex items-center gap-2 rounded-lg border border-steel-200 bg-steel-50 px-3 py-2 dark:border-steel-700 dark:bg-steel-900">
-                <code className="flex-1 break-all text-xs text-brand-600 dark:text-brand-400">{setupLink}</code>
-                <button
-                  onClick={() => navigator.clipboard.writeText(setupLink!)}
-                  className="shrink-0 rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-600 hover:bg-brand-500/10 dark:text-brand-400"
-                >
-                  Copy
-                </button>
+            <div
+              className="flex items-start gap-3 rounded-xl p-3.5"
+              style={{
+                background: 'rgba(16,185,129,0.07)',
+                border: '1px solid rgba(16,185,129,0.2)',
+              }}
+            >
+              <CheckCircle className="h-5 w-5 shrink-0 mt-0.5" style={{ color: '#34d399' }} />
+              <div>
+                <p className="text-sm font-semibold" style={{ color: '#34d399' }}>
+                  Account Activated
+                </p>
+                <p className="mt-0.5 text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  {approveName} has been approved as <strong className="text-emerald-400 capitalize">{approveRole}</strong>.
+                </p>
               </div>
-              <p className="mt-1.5 text-[10px] text-steel-400 dark:text-steel-500">
-                ⚠ This link expires. Share it promptly with the employee.
-              </p>
             </div>
+
+            {setupLink && (
+              <div>
+                <p className="label mb-2">Password Setup Link</p>
+                <div
+                  className="flex items-center gap-2 rounded-lg p-3"
+                  style={{
+                    background: 'rgba(9,17,31,0.6)',
+                    border: '1px solid rgba(23,199,232,0.12)',
+                  }}
+                >
+                  <code className="flex-1 break-all text-xs" style={{ color: '#17C7E8' }}>
+                    {setupLink}
+                  </code>
+                  <button
+                    onClick={copySetupLink}
+                    className="flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors"
+                    style={{ color: linkCopied ? '#34d399' : '#17C7E8', background: 'rgba(23,199,232,0.08)' }}
+                  >
+                    {linkCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    {linkCopied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  ⚠ Share this link promptly. It may expire after a single use.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </Modal>
 
-      {/* ══ REJECT MODAL ══ */}
+      {/* ══════════════════════════════════════════════════════════
+          REJECT MODAL
+      ══════════════════════════════════════════════════════════ */}
       <Modal
         open={!!rejectUser}
         onClose={() => { if (!rejectLoading) { setRejectUser(null); setRejectReason(''); } }}
         title="Reject Registration"
-        description={`Provide a mandatory reason for rejecting ${rejectUser?.name ?? ''}'s registration request.`}
+        description={`Provide a reason for rejecting ${rejectUser?.email ?? ''}'s request. This will be visible to the employee.`}
         size="sm"
         footer={
           <>
-            <Button variant="ghost" size="sm" onClick={() => setRejectUser(null)} disabled={rejectLoading}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setRejectUser(null)}
+              disabled={rejectLoading}
+            >
               Cancel
             </Button>
-            <Button variant="danger" size="sm" onClick={handleReject} disabled={rejectLoading || !rejectReason.trim()}>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleReject}
+              disabled={rejectLoading || rejectReason.trim().length < 10}
+            >
               {rejectLoading ? (
                 <><RefreshCw className="h-4 w-4 animate-spin" /> Rejecting…</>
               ) : (
-                <><XCircle className="h-4 w-4" /> Reject Registration</>
+                <><XCircle className="h-4 w-4" /> Reject Request</>
               )}
             </Button>
           </>
         }
       >
-        <Textarea
-          id="reject-reason"
-          label="Rejection Reason *"
-          rows={4}
-          value={rejectReason}
-          onChange={(e) => setRejectReason(e.target.value)}
-          placeholder="e.g. Employee ID not found in HR records. Please contact the HR department."
-          error={rejectReason.length > 0 && rejectReason.trim().length < 10 ? 'Reason must be at least 10 characters.' : undefined}
-        />
-        <p className="mt-1.5 text-[10px] text-steel-400 dark:text-steel-500">
-          This message will be shown to the employee when they check their registration status.
-        </p>
+        <div className="space-y-3">
+          {/* Who is being rejected */}
+          <div
+            className="flex items-center gap-2.5 rounded-lg p-3"
+            style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" style={{ color: '#f87171' }} />
+            <div>
+              <p className="text-xs font-semibold" style={{ color: '#f87171' }}>
+                Rejecting request from:
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                {rejectUser?.employeeId} · {rejectUser?.email}
+              </p>
+            </div>
+          </div>
+
+          <Textarea
+            id="reject-reason"
+            label="Rejection Reason *"
+            rows={4}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="e.g. Employee ID not found in HR records. Please contact the HR department and resubmit your request."
+            error={rejectReason.length > 0 && rejectReason.trim().length < 10
+              ? 'Reason must be at least 10 characters.'
+              : undefined}
+          />
+
+          <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            This message will be shown to the employee when they check their registration status.
+          </p>
+        </div>
       </Modal>
 
     </div>

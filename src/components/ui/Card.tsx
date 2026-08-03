@@ -17,7 +17,10 @@ export function Card({ children, className, hover }: CardProps) {
 
 export function CardHeader({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('px-5 py-4 border-b border-steel-200 dark:border-steel-800/80 flex items-center justify-between', className)}>
+    <div
+      className={cn('px-5 py-4 flex items-center justify-between', className)}
+      style={{ borderBottom: '1px solid rgba(23,199,232,0.08)' }}
+    >
       {children}
     </div>
   );
@@ -25,7 +28,10 @@ export function CardHeader({ children, className }: { children: ReactNode; class
 
 export function CardTitle({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <h3 className={cn('text-sm font-semibold tracking-tight text-steel-900 dark:text-steel-100', className)}>
+    <h3
+      className={cn('text-sm font-semibold tracking-tight', className)}
+      style={{ color: '#E2E8F0' }}
+    >
       {children}
     </h3>
   );
@@ -33,7 +39,10 @@ export function CardTitle({ children, className }: { children: ReactNode; classN
 
 export function CardDescription({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <p className={cn('text-xs text-steel-500 dark:text-steel-400 mt-0.5', className)}>
+    <p
+      className={cn('text-xs mt-0.5', className)}
+      style={{ color: 'rgba(255,255,255,0.4)' }}
+    >
       {children}
     </p>
   );
@@ -45,7 +54,13 @@ export function CardBody({ children, className }: { children: ReactNode; classNa
 
 export function CardFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('px-5 py-3 border-t border-steel-200 bg-steel-50/50 rounded-b-xl flex items-center justify-between dark:border-steel-800/80 dark:bg-steel-950/40', className)}>
+    <div
+      className={cn('px-5 py-3 rounded-b-xl flex items-center justify-between', className)}
+      style={{
+        borderTop: '1px solid rgba(23,199,232,0.08)',
+        backgroundColor: 'rgba(9,17,31,0.4)',
+      }}
+    >
       {children}
     </div>
   );

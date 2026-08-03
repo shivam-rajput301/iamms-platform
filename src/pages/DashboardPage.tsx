@@ -72,19 +72,21 @@ import {
   useRequestLogs,
 } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
-import { PRIORITY_META, REQUEST_STATUS_META } from "@/lib/constants";
+import { REQUEST_STATUS_META } from "@/lib/constants";
 import { formatNumber, timeAgo, formatDate, cn } from "@/lib/utils";
 import type { MaintenanceRequest } from "@/lib/types";
 
-const DARK_CHART_COLORS = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#06B6D4",
-  "#64748B",
-];
+
+
+// Shared dark tooltip style (Login Page design language)
+const DARK_TOOLTIP_STYLE = {
+  backgroundColor: "#0E1628",
+  borderRadius: 8,
+  border: "1px solid rgba(23,199,232,0.18)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+  fontSize: 12,
+  color: "#E2E8F0",
+} as const;
 
 export function DashboardPage() {
   const { profile } = useAuth();
@@ -1123,7 +1125,7 @@ function PlantWideDashboard() {
     },
   ];
 
-  const recentRequests = requests.slice(0, 6);
+
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -1136,7 +1138,7 @@ function PlantWideDashboard() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {kpis.map((k) => (
           <Link key={k.label} to={k.to} className="group">
-            <Card hover className="h-full border-steel-200 bg-white shadow-sm hover:border-steel-300">
+            <Card hover className="h-full">
               <CardBody className="p-4 flex flex-col justify-between h-full space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-steel-500">
@@ -1152,12 +1154,11 @@ function PlantWideDashboard() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl font-extrabold tracking-tight text-steel-900">
+                  <p className="text-2xl font-extrabold tracking-tight text-white">
                     {formatNumber(k.value)}
                   </p>
-                  <p className={cn("mt-1 flex items-center gap-1 text-[11px] font-semibold", k.trendColor)}>
-                    <TrendingUp className="h-3 w-3" />
-                    <span>{k.trend}</span>
+                  <p className="mt-1 text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    Live database
                   </p>
                 </div>
               </CardBody>
@@ -1168,15 +1169,18 @@ function PlantWideDashboard() {
 
       {/* Charts Section */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border-steel-200 bg-white">
-          <CardHeader className="flex items-center justify-between border-b border-steel-100">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex items-center justify-between">
             <div>
               <CardTitle>Monthly Maintenance Trend</CardTitle>
               <CardDescription>
                 Live database comparison of logged vs completed work orders
               </CardDescription>
             </div>
-            <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700">
+            <span
+              className="rounded-full px-2.5 py-1 text-xs font-semibold"
+              style={{ background: "rgba(23,199,232,0.1)", color: "#17C7E8" }}
+            >
               Database Sync
             </span>
           </CardHeader>
@@ -1185,18 +1189,18 @@ function PlantWideDashboard() {
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient id="reqGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0284c7" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#0284c7" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#17C7E8" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#17C7E8" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="compGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#e2e8f0"
-                  strokeOpacity={0.8}
+                  stroke="rgba(23,199,232,0.08)"
+                  strokeOpacity={1}
                 />
                 <XAxis
                   dataKey="month"
@@ -1209,22 +1213,19 @@ function PlantWideDashboard() {
                   axisLine={false}
                   tickLine={false}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: 6,
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                <Tooltip contentStyle={DARK_TOOLTIP_STYLE} />
+                <Legend
+                  wrapperStyle={{
                     fontSize: 12,
-                    color: "#0f172a",
+                    paddingTop: 10,
+                    color: "rgba(255,255,255,0.55)",
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
                 <Area
                   type="monotone"
                   dataKey="requests"
                   name="Total Requests"
-                  stroke="#0284c7"
+                  stroke="#17C7E8"
                   fill="url(#reqGrad)"
                   strokeWidth={2}
                 />
@@ -1241,8 +1242,8 @@ function PlantWideDashboard() {
           </CardBody>
         </Card>
 
-        <Card className="border-steel-200 bg-white">
-          <CardHeader className="border-b border-steel-100">
+        <Card>
+          <CardHeader>
             <CardTitle>Asset Health Distribution</CardTitle>
             <CardDescription>
               Database asset condition score breakdown
@@ -1266,29 +1267,26 @@ function PlantWideDashboard() {
                       key={i}
                       fill={
                         i === 0
-                          ? "#10b981"
+                          ? "#10b981"  // Excellent — green
                           : i === 1
-                            ? "#0284c7"
+                            ? "#17C7E8" // Good — cyan
                             : i === 2
-                              ? "#f59e0b"
-                              : "#ef4444"
+                              ? "#f59e0b" // Fair — amber
+                              : "#ef4444"  // Poor — red
                       }
-                      stroke="#ffffff"
+                      stroke="#09111F"
                       strokeWidth={2}
                     />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: 6,
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                    fontSize: 12,
-                    color: "#0f172a",
+                <Tooltip contentStyle={DARK_TOOLTIP_STYLE} />
+                <Legend
+                  wrapperStyle={{
+                    fontSize: 11,
+                    paddingTop: 10,
+                    color: "rgba(255,255,255,0.55)",
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
               </PieChart>
             </ResponsiveContainer>
           </CardBody>
@@ -1297,8 +1295,8 @@ function PlantWideDashboard() {
 
       {/* Row 2 Charts */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="border-steel-200 bg-white">
-          <CardHeader className="border-b border-steel-100">
+        <Card>
+          <CardHeader>
             <CardTitle>Department Asset Count</CardTitle>
           </CardHeader>
           <CardBody className="pt-4">
@@ -1306,8 +1304,8 @@ function PlantWideDashboard() {
               <BarChart data={deptData} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#e2e8f0"
-                  strokeOpacity={0.8}
+                  stroke="rgba(23,199,232,0.08)"
+                  strokeOpacity={1}
                   horizontal={false}
                 />
                 <XAxis
@@ -1324,20 +1322,11 @@ function PlantWideDashboard() {
                   tickLine={false}
                   width={90}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: 6,
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                    fontSize: 12,
-                    color: "#0f172a",
-                  }}
-                />
+                <Tooltip contentStyle={DARK_TOOLTIP_STYLE} />
                 <Bar
                   dataKey="value"
                   name="Assets"
-                  fill="#0284c7"
+                  fill="#17C7E8"
                   radius={[0, 4, 4, 0]}
                 />
               </BarChart>
@@ -1345,8 +1334,8 @@ function PlantWideDashboard() {
           </CardBody>
         </Card>
 
-        <Card className="border-steel-200 bg-white">
-          <CardHeader className="border-b border-steel-100">
+        <Card>
+          <CardHeader>
             <CardTitle>Breakdown Frequency</CardTitle>
           </CardHeader>
           <CardBody className="pt-4">
@@ -1354,8 +1343,8 @@ function PlantWideDashboard() {
               <BarChart data={breakdownData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#e2e8f0"
-                  strokeOpacity={0.8}
+                  stroke="rgba(23,199,232,0.08)"
+                  strokeOpacity={1}
                   vertical={false}
                 />
                 <XAxis
@@ -1372,16 +1361,7 @@ function PlantWideDashboard() {
                   axisLine={false}
                   tickLine={false}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: 6,
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                    fontSize: 12,
-                    color: "#0f172a",
-                  }}
-                />
+                <Tooltip contentStyle={DARK_TOOLTIP_STYLE} />
                 <Bar
                   dataKey="value"
                   name="Breakdowns"
@@ -1393,8 +1373,8 @@ function PlantWideDashboard() {
           </CardBody>
         </Card>
 
-        <Card className="border-steel-200 bg-white">
-          <CardHeader className="border-b border-steel-100">
+        <Card>
+          <CardHeader>
             <CardTitle>Maintenance Expenditure (₹)</CardTitle>
           </CardHeader>
           <CardBody className="pt-4">
@@ -1402,8 +1382,8 @@ function PlantWideDashboard() {
               <LineChart data={monthlyData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#e2e8f0"
-                  strokeOpacity={0.8}
+                  stroke="rgba(23,199,232,0.08)"
+                  strokeOpacity={1}
                 />
                 <XAxis
                   dataKey="month"
@@ -1418,14 +1398,7 @@ function PlantWideDashboard() {
                   tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                 />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: 6,
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                    fontSize: 12,
-                    color: "#0f172a",
-                  }}
+                  contentStyle={DARK_TOOLTIP_STYLE}
                   formatter={(v: number) => [
                     `₹${formatNumber(v)}`,
                     "Expenditure",
@@ -1435,9 +1408,9 @@ function PlantWideDashboard() {
                   type="monotone"
                   dataKey="cost"
                   name="Cost"
-                  stroke="#8b5cf6"
+                  stroke="#f59e0b"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: "#8b5cf6" }}
+                  dot={{ r: 3, fill: "#f59e0b" }}
                 />
               </LineChart>
             </ResponsiveContainer>

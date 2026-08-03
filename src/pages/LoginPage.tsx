@@ -350,6 +350,7 @@ function BlueprintIllustration() {
         y2="272"
         stroke={c(0.32)}
         strokeWidth="2"
+        
       />
       <line
         x1="326"

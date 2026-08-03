@@ -20,16 +20,37 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-dashed border-steel-300 dark:border-steel-800 bg-steel-50/50 dark:bg-steel-900/60 p-8 text-center",
+        "flex flex-col items-center justify-center rounded-xl p-8 text-center",
         className,
       )}
+      style={{
+        border: "1px dashed rgba(23,199,232,0.15)",
+        backgroundColor: "rgba(9,17,31,0.4)",
+      }}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-steel-100 dark:bg-steel-800 text-steel-600 dark:text-steel-300 border border-steel-200 dark:border-steel-700">
+      <div
+        className="flex h-12 w-12 items-center justify-center rounded-xl"
+        style={{
+          background: "rgba(23,199,232,0.08)",
+          border: "1px solid rgba(23,199,232,0.15)",
+          color: "rgba(23,199,232,0.7)",
+        }}
+      >
         <Icon className="h-6 w-6" />
       </div>
-      <h3 className="mt-3 text-sm font-semibold text-steel-900 dark:text-steel-100">{title}</h3>
+      <h3
+        className="mt-3 text-sm font-semibold"
+        style={{ color: "#E2E8F0" }}
+      >
+        {title}
+      </h3>
       {description && (
-        <p className="mt-1 max-w-sm text-xs text-steel-500 dark:text-steel-400">{description}</p>
+        <p
+          className="mt-1 max-w-sm text-xs"
+          style={{ color: "rgba(255,255,255,0.4)" }}
+        >
+          {description}
+        </p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>

@@ -9,13 +9,15 @@ interface BadgeProps {
 }
 
 export function Badge({ children, className, dot, variant = 'default' }: BadgeProps) {
+  // All variants use Login Page design language:
+  // success = green, warning = amber, danger = red, info = cyan (brand), neutral = slate
   const variantStyles = {
-    default: 'bg-steel-100 text-steel-700 border-steel-200 dark:bg-steel-800 dark:text-steel-200 dark:border-steel-700',
-    success: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60',
-    warning: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60',
-    danger:  'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60',
-    info:    'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:border-brand-800/60',
-    neutral: 'bg-steel-100 text-steel-700 border-steel-200 dark:bg-steel-800 dark:text-steel-300 dark:border-steel-700',
+    default: 'bg-[rgba(100,116,139,0.15)] text-[#94a3b8] border-[rgba(100,116,139,0.2)]',
+    success: 'bg-[rgba(16,185,129,0.12)] text-[#34d399] border-[rgba(16,185,129,0.2)]',
+    warning: 'bg-[rgba(245,158,11,0.12)] text-[#fbbf24] border-[rgba(245,158,11,0.2)]',
+    danger:  'bg-[rgba(239,68,68,0.12)]  text-[#f87171] border-[rgba(239,68,68,0.2)]',
+    info:    'bg-[rgba(23,199,232,0.1)]  text-[#17C7E8] border-[rgba(23,199,232,0.2)]',
+    neutral: 'bg-[rgba(100,116,139,0.12)] text-[#94a3b8] border-[rgba(100,116,139,0.18)]',
   };
 
   return (

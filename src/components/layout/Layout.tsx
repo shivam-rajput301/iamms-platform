@@ -6,7 +6,8 @@ import { Topbar } from "./Topbar";
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
-    <div className="min-h-screen bg-steel-50 dark:bg-steel-950">
+    // Always render with dark navy base — matching Login Page
+    <div className="dark min-h-screen" style={{ backgroundColor: "#09111F" }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="lg:pl-64">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
